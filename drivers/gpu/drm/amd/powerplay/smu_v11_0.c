@@ -1829,3 +1829,30 @@ void smu_v11_0_set_smu_funcs(struct smu_context *smu)
 		pr_warn("Unknown asic for smu11\n");
 	}
 }
+
+int smu_v11_0_set_default_od_settings(struct smu_context *smu, bool initialize, size_t overdrive_table_size)
+{
+	struct smu_table_context *table_context = &smu->smu_table;
+	int ret = 0;
+
+	if (initialize) {
+		if (table_context->overdrive_table) {
+			return -EINVAL;
+		}
+		table_context->overdrive_table = kzalloc(overdrive_table_size, GFP_KERNEL);
+		if (!table_context->overdrive_table) {
+			return -ENOMEM;
+		}
+		ret = smu_update_table(smu, SMU_TABLE_OVERDRIVE, 0, table_context->overdrive_table, false);
+		if (ret) {
+			pr_err("Failed to export overdrive table!\n");
+			return ret;
+		}
+	}
+	ret = smu_update_table(smu, SMU_TABLE_OVERDRIVE, 0, table_context->overdrive_table, true);
+	if (ret) {
+		pr_err("Failed to import overdrive table!\n");
+		return ret;
+	}
+	return ret;
+}

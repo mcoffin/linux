@@ -130,6 +130,7 @@ enum smu_v11_0_baco_seq {
 	BACO_SEQ_COUNT,
 };
 
+int smu_v11_0_set_default_od_settings(struct smu_context *smu, bool initialize, size_t overdrive_table_size);
 void smu_v11_0_set_smu_funcs(struct smu_context *smu);
 
 #endif
