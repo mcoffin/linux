@@ -492,6 +492,7 @@ static int navi10_append_powerplay_table(struct smu_context *smu)
 
 static int navi10_store_powerplay_table(struct smu_context *smu)
 {
+	uint32_t base_power_limit;
 	struct smu_11_0_powerplay_table *powerplay_table = NULL;
 	struct smu_table_context *table_context = &smu->smu_table;
 	struct smu_baco_context *smu_baco = &smu->smu_baco;
@@ -505,6 +506,14 @@ static int navi10_store_powerplay_table(struct smu_context *smu)
 	       sizeof(PPTable_t));
 
 	table_context->thermal_controller_type = powerplay_table->thermal_controller_type;
+	table_context->TDPODLimit = le32_to_cpu(powerplay_table->overdrive_table.max[SMU_11_0_ODSETTING_POWERPERCENTAGE]);
+	if (smu->od_enabled) {
+		// re-calculate the default power limit from new pp_table
+		base_power_limit = powerplay_table->smc_pptable.SocketPowerLimitAc[PPT_THROTTLER_PPT0];
+		base_power_limit *= (100 + table_context->TDPODLimit);
+		base_power_limit /= 100;
+		smu->max_power_limit = base_power_limit;
+	}
 
 	mutex_lock(&smu_baco->mutex);
 	if (powerplay_table->platform_caps & SMU_11_0_PP_PLATFORM_CAP_BACO ||

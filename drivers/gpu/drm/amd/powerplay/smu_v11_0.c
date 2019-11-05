@@ -1066,10 +1066,11 @@ static int smu_v11_0_init_max_sustainable_clocks(struct smu_context *smu)
 static int smu_v11_0_set_power_limit(struct smu_context *smu, uint32_t n)
 {
 	int ret = 0;
+	uint32_t max_power_limit = smu->max_power_limit ? smu->max_power_limit : smu->default_power_limit;
 
-	if (n > smu->default_power_limit) {
-		pr_err("New power limit is over the max allowed %d\n",
-				smu->default_power_limit);
+	if (n > max_power_limit) {
+		pr_err("New power limit (%d) is over the max allowed %d\n",
+				n, max_power_limit);
 		return -EINVAL;
 	}
 
