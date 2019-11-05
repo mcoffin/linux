@@ -27,6 +27,8 @@
 #define NAVI10_PEAK_SCLK_XT  		(1755)
 #define NAVI10_PEAK_SCLK_XL  		(1625)
 
+#define NAVI10_VOLTAGE_SCALE (4)
+
 extern void navi10_set_ppt_funcs(struct smu_context *smu);
 
 #endif
