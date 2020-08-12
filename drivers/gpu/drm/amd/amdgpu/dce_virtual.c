@@ -664,19 +664,19 @@ static int dce_virtual_pageflip(struct amdgpu_device *adev,
 		return 0;
 
 	spin_lock_irqsave(&adev->ddev->event_lock, flags);
-	works = amdgpu_crtc->dm_irq_params.pflip_works;
-	if (amdgpu_crtc->dm_irq_params.pflip_status != AMDGPU_FLIP_SUBMITTED) {
-		DRM_DEBUG_DRIVER("amdgpu_crtc->dm_irq_params.pflip_status = %d != "
-				 "AMDGPU_FLIP_SUBMITTED(%d)\n",
-				 amdgpu_crtc->dm_irq_params.pflip_status,
-				 AMDGPU_FLIP_SUBMITTED);
+	works = amdgpu_crtc->pflip_works;
+	if (amdgpu_crtc->pflip_status != AMDGPU_FLIP_SUBMITTED) {
+		DRM_DEBUG_DRIVER("amdgpu_crtc->pflip_status = %d != "
+			"AMDGPU_FLIP_SUBMITTED(%d)\n",
+			amdgpu_crtc->pflip_status,
+			AMDGPU_FLIP_SUBMITTED);
 		spin_unlock_irqrestore(&adev->ddev->event_lock, flags);
 		return 0;
 	}
 
 	/* page flip completed. clean up */
-	amdgpu_crtc->dm_irq_params.pflip_status = AMDGPU_FLIP_NONE;
-	amdgpu_crtc->dm_irq_params.pflip_works = NULL;
+	amdgpu_crtc->pflip_status = AMDGPU_FLIP_NONE;
+	amdgpu_crtc->pflip_works = NULL;
 
 	/* wakeup usersapce */
 	if (works->event)
