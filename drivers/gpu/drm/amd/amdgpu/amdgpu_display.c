@@ -111,7 +111,7 @@ static void amdgpu_display_flip_work_func(struct work_struct *__work)
 	adev->mode_info.funcs->page_flip(adev, work->crtc_id, work->base, work->async);
 
 	/* Set the flip status */
-	amdgpu_crtc->pflip_status = AMDGPU_FLIP_SUBMITTED;
+	amdgpu_crtc->dm_irq_params.pflip_status = AMDGPU_FLIP_SUBMITTED;
 	spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
 
 
@@ -223,15 +223,15 @@ int amdgpu_display_crtc_page_flip_target(struct drm_crtc *crtc,
 
 	/* we borrow the event spin lock for protecting flip_wrok */
 	spin_lock_irqsave(&crtc->dev->event_lock, flags);
-	if (amdgpu_crtc->pflip_status != AMDGPU_FLIP_NONE) {
+	if (amdgpu_crtc->dm_irq_params.pflip_status != AMDGPU_FLIP_NONE) {
 		DRM_DEBUG_DRIVER("flip queue: crtc already busy\n");
 		spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
 		r = -EBUSY;
 		goto pflip_cleanup;
 	}
 
-	amdgpu_crtc->pflip_status = AMDGPU_FLIP_PENDING;
-	amdgpu_crtc->pflip_works = work;
+	amdgpu_crtc->dm_irq_params.pflip_status = AMDGPU_FLIP_PENDING;
+	amdgpu_crtc->dm_irq_params.pflip_works = work;
 
 
 	DRM_DEBUG_DRIVER("crtc:%d[%p], pflip_stat:AMDGPU_FLIP_PENDING, work: %p,\n",

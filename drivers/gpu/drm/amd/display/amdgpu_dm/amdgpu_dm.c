@@ -322,9 +322,9 @@ static void dm_pflip_high_irq(void *interrupt_params)
 
 	spin_lock_irqsave(&adev->ddev->event_lock, flags);
 
-	if (amdgpu_crtc->pflip_status != AMDGPU_FLIP_SUBMITTED){
-		DRM_DEBUG_DRIVER("amdgpu_crtc->pflip_status = %d !=AMDGPU_FLIP_SUBMITTED(%d) on crtc:%d[%p] \n",
-						 amdgpu_crtc->pflip_status,
+	if (amdgpu_crtc->dm_irq_params.pflip_status != AMDGPU_FLIP_SUBMITTED){
+		DRM_DEBUG_DRIVER("amdgpu_crtc->dm_irq_params.pflip_status = %d !=AMDGPU_FLIP_SUBMITTED(%d) on crtc:%d[%p] \n",
+						 amdgpu_crtc->dm_irq_params.pflip_status,
 						 AMDGPU_FLIP_SUBMITTED,
 						 amdgpu_crtc->crtc_id,
 						 amdgpu_crtc);
@@ -389,10 +389,10 @@ static void dm_pflip_high_irq(void *interrupt_params)
 	 * of pageflip completion, so last_flip_vblank is the forbidden count
 	 * for queueing new pageflips if vsync + VRR is enabled.
 	 */
-	amdgpu_crtc->last_flip_vblank =
+	amdgpu_crtc->dm_irq_params.last_flip_vblank =
 		amdgpu_get_vblank_counter_kms(&amdgpu_crtc->base);
 
-	amdgpu_crtc->pflip_status = AMDGPU_FLIP_NONE;
+	amdgpu_crtc->dm_irq_params.pflip_status = AMDGPU_FLIP_NONE;
 	spin_unlock_irqrestore(&adev->ddev->event_lock, flags);
 
 	DRM_DEBUG_DRIVER("crtc:%d[%p], pflip_stat:AMDGPU_FLIP_NONE, vrr[%d]-fp %d\n",
@@ -512,14 +512,14 @@ static void dm_crtc_high_irq(void *interrupt_params)
 	 * which could cause too early flip completion events.
 	 */
 	if (adev->family >= AMDGPU_FAMILY_RV &&
-	    acrtc->pflip_status == AMDGPU_FLIP_SUBMITTED &&
+	    acrtc->dm_irq_params.pflip_status == AMDGPU_FLIP_SUBMITTED &&
 	    acrtc_state->active_planes == 0) {
 		if (acrtc->event) {
 			drm_crtc_send_vblank_event(&acrtc->base, acrtc->event);
 			acrtc->event = NULL;
 			drm_crtc_vblank_put(&acrtc->base);
 		}
-		acrtc->pflip_status = AMDGPU_FLIP_NONE;
+		acrtc->dm_irq_params.pflip_status = AMDGPU_FLIP_NONE;
 	}
 
 	spin_unlock_irqrestore(&adev->ddev->event_lock, flags);
@@ -6884,7 +6884,7 @@ static void prepare_flip_isr(struct amdgpu_crtc *acrtc)
 	acrtc->event = acrtc->base.state->event;
 
 	/* Set the flip status */
-	acrtc->pflip_status = AMDGPU_FLIP_SUBMITTED;
+	acrtc->dm_irq_params.pflip_status = AMDGPU_FLIP_SUBMITTED;
 
 	/* Mark this event as consumed */
 	acrtc->base.state->event = NULL;
@@ -7238,7 +7238,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_state *state,
 			 * on late submission of flips.
 			 */
 			spin_lock_irqsave(&pcrtc->dev->event_lock, flags);
-			last_flip_vblank = acrtc_attach->last_flip_vblank;
+			last_flip_vblank = acrtc_attach->dm_irq_params.last_flip_vblank;
 			spin_unlock_irqrestore(&pcrtc->dev->event_lock, flags);
 		}
 
@@ -7273,7 +7273,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_state *state,
 
 			spin_lock_irqsave(&pcrtc->dev->event_lock, flags);
 
-			WARN_ON(acrtc_attach->pflip_status != AMDGPU_FLIP_NONE);
+			WARN_ON(acrtc_attach->dm_irq_params.pflip_status != AMDGPU_FLIP_NONE);
 			prepare_flip_isr(acrtc_attach);
 
 			spin_unlock_irqrestore(&pcrtc->dev->event_lock, flags);

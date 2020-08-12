@@ -46,6 +46,7 @@
 
 #include <drm/drm_dp_mst_helper.h>
 #include "modules/inc/mod_freesync.h"
+#include "amdgpu_dm_irq_params.h"
 
 struct amdgpu_bo;
 struct amdgpu_device;
@@ -115,12 +116,6 @@ enum amdgpu_pageflip_irq {
 	AMDGPU_PAGEFLIP_IRQ_D5,
 	AMDGPU_PAGEFLIP_IRQ_D6,
 	AMDGPU_PAGEFLIP_IRQ_NONE = 0xff
-};
-
-enum amdgpu_flip_status {
-	AMDGPU_FLIP_NONE,
-	AMDGPU_FLIP_PENDING,
-	AMDGPU_FLIP_SUBMITTED
 };
 
 #define AMDGPU_MAX_I2C_BUS 16
@@ -406,11 +401,8 @@ struct amdgpu_crtc {
 	fixed20_12 hsc;
 	struct drm_display_mode native_mode;
 	u32 pll_id;
-	/* page flipping */
-	struct amdgpu_flip_work *pflip_works;
-	enum amdgpu_flip_status pflip_status;
-	int deferred_flip_completion;
-	u32 last_flip_vblank;
+	/* parameters access from DM IRQ handler */
+	struct dm_irq_params dm_irq_params;
 	/* pll sharing */
 	struct amdgpu_atom_ss ss;
 	bool ss_enabled;
