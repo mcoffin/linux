@@ -937,7 +937,11 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 
 pro_end:
 	up_read(&adev->reset_sem);
-	return ret;
+	if (ret) {
+		return ret;
+	} else {
+		return count;
+	}
 }
 
 static ssize_t amdgpu_get_pp_od_clk_voltage(struct device *dev,
