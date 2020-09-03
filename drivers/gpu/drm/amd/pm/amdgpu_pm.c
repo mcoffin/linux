@@ -776,8 +776,10 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 	if (amdgpu_in_reset(adev))
 		return -EPERM;
 
-	if (count > 127)
+	if (count > 127) {
+		dev_warn(dev, "Invalid pp_od_clk_voltage: argument too long\n");
 		return -EINVAL;
+	}
 
 	if (*buf == 's')
 		type = PP_OD_EDIT_SCLK_VDDC_TABLE;
@@ -789,8 +791,10 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 		type = PP_OD_COMMIT_DPM_TABLE;
 	else if (!strncmp(buf, "vc", 2))
 		type = PP_OD_EDIT_VDDC_CURVE;
-	else
+	else {
+		dev_warn(dev, "Invalid pp_od_clk_voltage: Unknown buffer start\n");
 		return -EINVAL;
+	}
 
 	memcpy(buf_cpy, buf, count+1);
 
@@ -802,8 +806,10 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 
 	while ((sub_str = strsep(&tmp_str, delimiter)) != NULL) {
 		ret = kstrtol(sub_str, 0, &parameter[parameter_size]);
-		if (ret)
+		if (ret) {
+			dev_warn(dev, "Invalid pp_od_clk_voltage: failed to parse number: \"%s\"\n", sub_str);
 			return -EINVAL;
+		}
 		parameter_size++;
 
 		while (isspace(*tmp_str))
@@ -823,6 +829,7 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 		if (ret) {
 			pm_runtime_mark_last_busy(ddev->dev);
 			pm_runtime_put_autosuspend(ddev->dev);
+			dev_warn(dev, "Invalid pp_od_clk_voltage: smu_od_edit_dpm_table failed with status: %d\n", ret);
 			return -EINVAL;
 		}
 	} else {
@@ -832,6 +839,7 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 			if (ret) {
 				pm_runtime_mark_last_busy(ddev->dev);
 				pm_runtime_put_autosuspend(ddev->dev);
+				dev_warn(dev, "Invalid pp_od_clk_voltage: smu_odn_edit_dpm_table failed with status: %d\n", ret);
 				return -EINVAL;
 			}
 		}
@@ -847,6 +855,7 @@ static ssize_t amdgpu_set_pp_od_clk_voltage(struct device *dev,
 			} else {
 				pm_runtime_mark_last_busy(ddev->dev);
 				pm_runtime_put_autosuspend(ddev->dev);
+				dev_warn(dev, "Invalid pp_od_clk_voltage: dispatch_tasks function did not exist!\n");
 				return -EINVAL;
 			}
 		}
