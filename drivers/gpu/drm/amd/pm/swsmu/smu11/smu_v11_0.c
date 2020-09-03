@@ -1983,6 +1983,8 @@ int smu_v11_0_gfx_ulv_control(struct smu_context *smu,
 {
 	int ret = 0;
 
+	dev_warn(smu->adev->dev, "smu_v11_0_gfx_ulv_control: enabled = %s\n", enablement ? "true" : "false");
+
 	if (smu_cmn_feature_is_supported(smu, SMU_FEATURE_GFX_ULV_BIT))
 		ret = smu_cmn_feature_set_enabled(smu, SMU_FEATURE_GFX_ULV_BIT, enablement);
 
