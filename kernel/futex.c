@@ -2730,8 +2730,8 @@ retry:
 		ret = get_futex_key(qs[i].uaddr, flags & FLAGS_SHARED,
 				    &qs[i].key, FUTEX_READ);
 		if (unlikely(ret)) {
-			for (--i; i >= 0; i--)
-				put_futex_key(&qs[i].key);
+			// for (--i; i >= 0; i--)
+			// 	put_futex_key(&qs[i].key);
 			return ret;
 		}
 	}
@@ -2759,7 +2759,7 @@ retry:
 			 * Keys 0..(i-1) are implicitly put
 			 * on unqueue_multiple.
 			 */
-			put_futex_key(&q->key);
+			// put_futex_key(&q->key);
 
 			*awaken = unqueue_multiple(qs, i);
 
@@ -2789,7 +2789,7 @@ retry:
 		if (uval != q->uval) {
 			queue_unlock(hb);
 
-			put_futex_key(&qs[i].key);
+			// put_futex_key(&qs[i].key);
 
 			/*
 			 * If something was already awaken, we can
