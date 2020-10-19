@@ -43,7 +43,6 @@
 
 struct amdgpu_mman {
 	struct ttm_bo_device		bdev;
-	bool				mem_global_referenced;
 	bool				initialized;
 	void __iomem			*aper_base_kaddr;
 
