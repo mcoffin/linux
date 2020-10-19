@@ -31,6 +31,7 @@
 #define SMU_THERMAL_MINIMUM_ALERT_TEMP		0
 #define SMU_THERMAL_MAXIMUM_ALERT_TEMP		255
 #define SMU_TEMPERATURE_UNITS_PER_CENTIGRADES	1000
+#define SMU_FW_NAME_LEN			0x24
 
 struct smu_hw_power_state {
 	unsigned int magic;
@@ -225,6 +226,7 @@ struct smu_bios_boot_up_values
 	uint32_t			format_revision;
 	uint32_t			content_revision;
 	uint32_t			fclk;
+	uint32_t			lclk;
 };
 
 enum smu_table_id
@@ -573,6 +575,7 @@ struct pptable_funcs {
 	int (*get_fan_parameters)(struct smu_context *smu);
 	int (*post_init)(struct smu_context *smu);
 	void (*interrupt_work)(struct smu_context *smu);
+	int (*gpo_control)(struct smu_context *smu, bool enablement);
 };
 
 typedef enum {
