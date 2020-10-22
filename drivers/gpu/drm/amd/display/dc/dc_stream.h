@@ -45,6 +45,7 @@ struct dc_stream_status {
 	int audio_inst;
 	struct timing_sync_info timing_sync_info;
 	struct dc_plane_state *plane_states[MAX_SURFACE_NUM];
+	bool is_abm_supported;
 };
 
 // TODO: References to this needs to be removed..
@@ -391,12 +392,14 @@ enum dc_status dc_validate_stream(struct dc *dc, struct dc_stream_state *stream)
  * Enable stereo when commit_streams is not required,
  * for example, frame alternate.
  */
-bool dc_enable_stereo(
+void dc_enable_stereo(
 	struct dc *dc,
 	struct dc_state *context,
 	struct dc_stream_state *streams[],
 	uint8_t stream_count);
 
+/* Triggers multi-stream synchronization. */
+void dc_trigger_sync(struct dc *dc, struct dc_state *context);
 
 enum surface_update_type dc_check_update_surfaces_for_stream(
 		struct dc *dc,
