@@ -63,7 +63,6 @@
 
 #define AMDGPU_TTM_VRAM_MAX_DW_READ	(size_t)128
 
-
 /**
  * amdgpu_init_mem_type - Initialize a memory manager for a specific type of
  * memory request.

@@ -670,7 +670,7 @@ struct drm_amdgpu_cs_chunk_data {
 	};
 };
 
-/**
+/*
  *  Query h/w info: Flag that this is integrated (a.h.a. fusion) GPU
  *
  */
@@ -1101,6 +1101,7 @@ struct drm_amdgpu_info_vce_clock_table {
 struct drm_amdgpu_freesync {
 	__u32 op;			/* AMDGPU_FREESYNC_FULLSCREEN_ENTER or */
 					/* AMDGPU_FREESYNC_FULLSCREEN_EXIT */
+				        /* AMDGPU_FREESYNC_FULLSCREEN_ENTER */
 	__u32 spare[7];
 };
 
