@@ -2006,9 +2006,6 @@ static int default_attr_update(struct amdgpu_device *adev, struct amdgpu_device_
 			       uint32_t mask, enum amdgpu_device_attr_states *states)
 {
 	struct device_attribute *dev_attr = &attr->dev_attr;
-	uint32_t mp1_ver = adev->ip_versions[MP1_HWIP][0];
-	uint32_t gc_ver = adev->ip_versions[GC_HWIP][0];
-	const char *attr_name = dev_attr->attr.name;
 
 	if (!(attr->flags & mask) ||
 	      !(AMD_SYSFS_IF_BITMASK(attr->if_bit) & adev->pm.sysfs_if_supported))  {
@@ -2016,111 +2013,13 @@ static int default_attr_update(struct amdgpu_device *adev, struct amdgpu_device_
 		return 0;
 	}
 
-#define DEVICE_ATTR_IS(_name)	(!strcmp(attr_name, #_name))
-
-	if (DEVICE_ATTR_IS(pp_dpm_socclk)) {
-		if (gc_ver < IP_VERSION(9, 0, 0))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_dpm_dcefclk)) {
-		if (gc_ver < IP_VERSION(9, 0, 0) ||
-		    gc_ver == IP_VERSION(9, 4, 1) ||
-		    gc_ver == IP_VERSION(9, 4, 2))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_dpm_fclk)) {
-		if (mp1_ver < IP_VERSION(10, 0, 0))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_od_clk_voltage)) {
-		*states = ATTR_STATE_UNSUPPORTED;
-		if (amdgpu_dpm_is_overdrive_supported(adev))
-			*states = ATTR_STATE_SUPPORTED;
-	} else if (DEVICE_ATTR_IS(mem_busy_percent)) {
-		if (adev->flags & AMD_IS_APU || gc_ver == IP_VERSION(9, 0, 1))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pcie_bw)) {
-		/* PCIe Perf counters won't work on APU nodes */
-		if (adev->flags & AMD_IS_APU)
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(unique_id)) {
-		switch (gc_ver) {
-		case IP_VERSION(9, 0, 1):
-		case IP_VERSION(9, 4, 0):
-		case IP_VERSION(9, 4, 1):
-		case IP_VERSION(9, 4, 2):
-		case IP_VERSION(10, 3, 0):
-		case IP_VERSION(11, 0, 0):
-			*states = ATTR_STATE_SUPPORTED;
-			break;
-		default:
-			*states = ATTR_STATE_UNSUPPORTED;
-		}
-	} else if (DEVICE_ATTR_IS(pp_features)) {
-		if (adev->flags & AMD_IS_APU || gc_ver < IP_VERSION(9, 0, 0))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(gpu_metrics)) {
-		if (gc_ver < IP_VERSION(9, 1, 0))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_dpm_vclk)) {
-		if (!(gc_ver == IP_VERSION(10, 3, 1) ||
-		      gc_ver == IP_VERSION(10, 3, 0) ||
-		      gc_ver == IP_VERSION(10, 1, 2) ||
-		      gc_ver == IP_VERSION(11, 0, 0) ||
-		      gc_ver == IP_VERSION(11, 0, 2)))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_dpm_dclk)) {
-		if (!(gc_ver == IP_VERSION(10, 3, 1) ||
-		      gc_ver == IP_VERSION(10, 3, 0) ||
-		      gc_ver == IP_VERSION(10, 1, 2) ||
-		      gc_ver == IP_VERSION(11, 0, 0) ||
-		      gc_ver == IP_VERSION(11, 0, 2)))
-			*states = ATTR_STATE_UNSUPPORTED;
-	} else if (DEVICE_ATTR_IS(pp_power_profile_mode)) {
-		if (amdgpu_dpm_get_power_profile_mode(adev, NULL) == -EOPNOTSUPP)
-			*states = ATTR_STATE_UNSUPPORTED;
-		else if (gc_ver == IP_VERSION(10, 3, 0) && amdgpu_sriov_vf(adev))
-			*states = ATTR_STATE_UNSUPPORTED;
-	}
-
-	switch (gc_ver) {
-	case IP_VERSION(9, 4, 1):
-	case IP_VERSION(9, 4, 2):
-		/* the Mi series card does not support standalone mclk/socclk/fclk level setting */
-		if (DEVICE_ATTR_IS(pp_dpm_mclk) ||
-		    DEVICE_ATTR_IS(pp_dpm_socclk) ||
-		    DEVICE_ATTR_IS(pp_dpm_fclk)) {
-			dev_attr->attr.mode &= ~S_IWUGO;
-			dev_attr->store = NULL;
-		}
-		break;
-	case IP_VERSION(10, 3, 0):
-		if (DEVICE_ATTR_IS(power_dpm_force_performance_level) &&
-		    amdgpu_sriov_vf(adev)) {
-			dev_attr->attr.mode &= ~0222;
-			dev_attr->store = NULL;
-		}
-		break;
-	default:
-		break;
-	}
-
-	if (DEVICE_ATTR_IS(pp_dpm_dcefclk)) {
-		/* SMU MP1 does not support dcefclk level setting */
-		if (gc_ver >= IP_VERSION(10, 0, 0)) {
-			dev_attr->attr.mode &= ~S_IWUGO;
-			dev_attr->store = NULL;
-		}
-	}
-
-	/* setting should not be allowed from VF if not in one VF mode */
-	if (amdgpu_sriov_vf(adev) && !amdgpu_sriov_is_pp_one_vf(adev)) {
+	if (!(adev->pm.sysfs_if_attr_mode[attr->if_bit] & S_IWUGO)) {
 		dev_attr->attr.mode &= ~S_IWUGO;
 		dev_attr->store = NULL;
 	}
 
-#undef DEVICE_ATTR_IS
-
 	return 0;
 }
-
 
 static int amdgpu_device_attr_create(struct amdgpu_device *adev,
 				     struct amdgpu_device_attr *attr,
@@ -3411,6 +3310,101 @@ static const struct attribute_group *hwmon_groups[] = {
 	NULL
 };
 
+static void amdgpu_sysfs_if_support_check(struct amdgpu_device *adev)
+{
+	uint64_t *sysfs_if_supported = &adev->pm.sysfs_if_supported;
+	umode_t *sysfs_if_attr_mode = adev->pm.sysfs_if_attr_mode;
+	uint32_t mp1_ver = adev->ip_versions[MP1_HWIP][0];
+	uint32_t gc_ver = adev->ip_versions[GC_HWIP][0];
+	int i;
+
+	/* All but those specific ASICs support these */
+	*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+	*sysfs_if_supported &= ~(BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+				 BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT));
+
+	if (gc_ver < IP_VERSION(9, 1, 0)) {
+		*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_GPU_METRICS_BIT);
+
+		if (gc_ver == IP_VERSION(9, 0, 1)) {
+			*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_MEM_BUSY_PERCENT_BIT);
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+		}
+
+		if (gc_ver < IP_VERSION(9, 0, 0))
+			*sysfs_if_supported &= ~(BIT_ULL(AMD_SYSFS_IF_PP_DPM_SOCCLK_BIT) |
+						 BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT) |
+						 BIT_ULL(AMD_SYSFS_IF_PP_FEATURES_BIT));
+	} else {
+		switch (gc_ver) {
+		case IP_VERSION(9, 4, 0):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+			break;
+		case IP_VERSION(9, 4, 1):
+		case IP_VERSION(9, 4, 2):
+			*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT);
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+			/* the Mi series card does not support standalone mclk/socclk/fclk level setting */
+			sysfs_if_attr_mode[AMD_SYSFS_IF_PP_DPM_MCLK_BIT] &= ~S_IWUGO;
+			sysfs_if_attr_mode[AMD_SYSFS_IF_PP_DPM_SOCCLK_BIT] &= ~S_IWUGO;
+			sysfs_if_attr_mode[AMD_SYSFS_IF_PP_DPM_FCLK_BIT] &= ~S_IWUGO;
+			break;
+		case IP_VERSION(10, 1, 2):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+					       BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT);
+			break;
+		case IP_VERSION(10, 3, 0):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+					       BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT);
+			if (amdgpu_sriov_vf(adev)) {
+				*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_PP_POWER_PROFILE_MODE_BIT);
+				sysfs_if_attr_mode[AMD_SYSFS_IF_POWER_DPM_FORCE_PERFORMANCE_LEVEL_BIT] &= ~S_IWUGO;
+			}
+			break;
+		case IP_VERSION(10, 3, 1):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+					       BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT);
+			break;
+		case IP_VERSION(11, 0, 0):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_UNIQUE_ID_BIT);
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+					       BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT);
+			break;
+		case IP_VERSION(11, 0, 2):
+			*sysfs_if_supported |= BIT_ULL(AMD_SYSFS_IF_PP_DPM_VCLK_BIT) |
+					       BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCLK_BIT);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (mp1_ver < IP_VERSION(10, 0, 0))
+		*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_PP_DPM_FCLK_BIT);
+
+	if (adev->flags & AMD_IS_APU)
+		*sysfs_if_supported &= ~(BIT_ULL(AMD_SYSFS_IF_MEM_BUSY_PERCENT_BIT) |
+					 BIT_ULL(AMD_SYSFS_IF_PCIE_BW_BIT) |
+					 BIT_ULL(AMD_SYSFS_IF_PP_FEATURES_BIT));
+
+	if (!amdgpu_dpm_is_overdrive_supported(adev))
+		*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_PP_OD_CLK_VOLTAGE_BIT);
+
+	if (amdgpu_dpm_get_power_profile_mode(adev, NULL) == -EOPNOTSUPP)
+		*sysfs_if_supported &= ~BIT_ULL(AMD_SYSFS_IF_PP_POWER_PROFILE_MODE_BIT);
+
+	if (gc_ver >= IP_VERSION(10, 0, 0))
+		sysfs_if_attr_mode[AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT] &= ~S_IWUGO;
+
+	/* setting should not be allowed from VF if not in one VF mode */
+	if (amdgpu_sriov_vf(adev) &&
+	    !amdgpu_sriov_is_pp_one_vf(adev)) {
+		for (i = 0; i < AMD_MAX_NUMBER_OF_SYSFS_IF_SUPPORTED; i++)
+			sysfs_if_attr_mode[i] &= ~S_IWUGO;
+	}
+}
+
 int amdgpu_pm_sysfs_init(struct amdgpu_device *adev)
 {
 	int ret;
@@ -3423,6 +3417,8 @@ int amdgpu_pm_sysfs_init(struct amdgpu_device *adev)
 
 	if (adev->pm.dpm_enabled == 0)
 		return 0;
+
+	amdgpu_sysfs_if_support_check(adev);
 
 	adev->pm.int_hwmon_dev = hwmon_device_register_with_groups(adev->dev,
 								   DRIVER_NAME, adev,
