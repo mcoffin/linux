@@ -46,6 +46,7 @@ enum amdgpu_device_attr_states {
 
 struct amdgpu_device_attr {
 	struct device_attribute dev_attr;
+	uint64_t if_bit;
 	enum amdgpu_device_attr_flags flags;
 	int (*attr_update)(struct amdgpu_device *adev, struct amdgpu_device_attr *attr,
 			   uint32_t mask, enum amdgpu_device_attr_states *states);
@@ -60,24 +61,25 @@ struct amdgpu_device_attr_entry {
 #define to_amdgpu_device_attr(_dev_attr) \
 	container_of(_dev_attr, struct amdgpu_device_attr, dev_attr)
 
-#define __AMDGPU_DEVICE_ATTR(_name, _mode, _show, _store, _flags, ...)	\
+#define __AMDGPU_DEVICE_ATTR(_name, _mode, _show, _store, _bit, _flags, ...)	\
 	{ .dev_attr = __ATTR(_name, _mode, _show, _store),		\
+	  .if_bit = _bit,					\
 	  .flags = _flags,						\
 	  ##__VA_ARGS__, }
 
-#define AMDGPU_DEVICE_ATTR(_name, _mode, _flags, ...)			\
+#define AMDGPU_DEVICE_ATTR(_name, _mode, _bit, _flags, ...)		\
 	__AMDGPU_DEVICE_ATTR(_name, _mode,				\
 			     amdgpu_get_##_name, amdgpu_set_##_name,	\
-			     _flags, ##__VA_ARGS__)
+			     _bit, _flags, ##__VA_ARGS__)
 
-#define AMDGPU_DEVICE_ATTR_RW(_name, _flags, ...)			\
+#define AMDGPU_DEVICE_ATTR_RW(_name, _bit, _flags, ...)		\
 	AMDGPU_DEVICE_ATTR(_name, S_IRUGO | S_IWUSR,			\
-			   _flags, ##__VA_ARGS__)
+			   _bit, _flags, ##__VA_ARGS__)
 
-#define AMDGPU_DEVICE_ATTR_RO(_name, _flags, ...)			\
+#define AMDGPU_DEVICE_ATTR_RO(_name, _bit, _flags, ...)		\
 	__AMDGPU_DEVICE_ATTR(_name, S_IRUGO,				\
 			     amdgpu_get_##_name, NULL,			\
-			     _flags, ##__VA_ARGS__)
+			     _bit, _flags, ##__VA_ARGS__)
 
 int amdgpu_pm_sysfs_init(struct amdgpu_device *adev);
 int amdgpu_pm_virt_sysfs_init(struct amdgpu_device *adev);

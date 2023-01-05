@@ -312,6 +312,39 @@ struct config_table_setting
 	uint16_t fclk_average_tau;
 };
 
+/* Bitmasks for controlling which Sysfs interface to support */
+#define AMD_SYSFS_IF_POWER_DPM_STATE_BIT			0U
+#define AMD_SYSFS_IF_POWER_DPM_FORCE_PERFORMANCE_LEVEL_BIT	1U
+#define AMD_SYSFS_IF_PP_NUM_STATES_BIT				2U
+#define AMD_SYSFS_IF_PP_CUR_STATE_BIT				3U
+#define AMD_SYSFS_IF_PP_FORCE_STATE_BIT				4U
+#define AMD_SYSFS_IF_PP_TABLE_BIT				5U
+#define AMD_SYSFS_IF_PP_DPM_SCLK_BIT				6U
+#define AMD_SYSFS_IF_PP_DPM_MCLK_BIT				7U
+#define AMD_SYSFS_IF_PP_DPM_SOCCLK_BIT				8U
+#define AMD_SYSFS_IF_PP_DPM_FCLK_BIT				9U
+#define AMD_SYSFS_IF_PP_DPM_VCLK_BIT				10U
+#define AMD_SYSFS_IF_PP_DPM_DCLK_BIT				11U
+#define AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT				12U
+#define AMD_SYSFS_IF_PP_DPM_PCIE_BIT				13U
+#define AMD_SYSFS_IF_PP_SCLK_OD_BIT				14U
+#define AMD_SYSFS_IF_PP_MCLK_OD_BIT				15U
+#define AMD_SYSFS_IF_PP_POWER_PROFILE_MODE_BIT			16U
+#define AMD_SYSFS_IF_PP_OD_CLK_VOLTAGE_BIT			17U
+#define AMD_SYSFS_IF_GPU_BUSY_PERCENT_BIT			18U
+#define AMD_SYSFS_IF_MEM_BUSY_PERCENT_BIT			19U
+#define AMD_SYSFS_IF_PCIE_BW_BIT				20U
+#define AMD_SYSFS_IF_PP_FEATURES_BIT				21U
+#define AMD_SYSFS_IF_UNIQUE_ID_BIT				22U
+#define AMD_SYSFS_IF_THERMAL_THROTTLING_LOGGING_BIT		23U
+#define AMD_SYSFS_IF_GPU_METRICS_BIT				24U
+#define AMD_SYSFS_IF_SMARTSHIFT_APU_POWER_BIT			25U
+#define AMD_SYSFS_IF_SMARTSHIFT_DGPU_POWER_BIT			26U
+#define AMD_SYSFS_IF_SMARTSHIFT_BIAS_BIT			27U
+#define AMD_MAX_NUMBER_OF_SYSFS_IF_SUPPORTED			64U
+#define AMD_SYSFS_IF_BITMASK(if_bit)				(1ULL << (if_bit))
+#define AMD_SYSFS_IF_BITMASK_ALL_SUPPORTED			ULLONG_MAX
+
 struct amdgpu_pm {
 	struct mutex		mutex;
 	u32                     current_sclk;
@@ -364,6 +397,10 @@ struct amdgpu_pm {
 	struct config_table_setting config_table;
 	/* runtime mode */
 	enum amdgpu_runpm_mode rpm_mode;
+
+	/* bitmasks for clarifying which sysfs interfaces supported */
+	uint64_t		sysfs_if_supported;
+	umode_t			sysfs_if_attr_mode[AMD_MAX_NUMBER_OF_SYSFS_IF_SUPPORTED];
 };
 
 int amdgpu_dpm_read_sensor(struct amdgpu_device *adev, enum amd_pp_sensors sensor,
