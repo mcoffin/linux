@@ -1736,4 +1736,9 @@ void smu_v13_0_7_set_ppt_funcs(struct smu_context *smu)
 					      BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT) |
 					      BIT_ULL(AMD_SYSFS_IF_PP_SCLK_OD_BIT) |
 					      BIT_ULL(AMD_SYSFS_IF_PP_MCLK_OD_BIT));
+	/* Drop the support for manual fan speed(RPM and PWM) setting */
+	smu->adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_ENABLE_BIT] &= ~S_IWUSR;
+	smu->adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_BIT] &= ~S_IWUSR;
+	smu->adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_FAN1_ENABLE_BIT] &= ~S_IWUSR;
+	smu->adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_FAN1_TARGET_BIT] &= ~S_IWUSR;
 }
