@@ -3155,147 +3155,101 @@ static umode_t hwmon_attributes_visible(struct kobject *kobj,
 	struct device *dev = kobj_to_dev(kobj);
 	struct amdgpu_device *adev = dev_get_drvdata(dev);
 	umode_t effective_mode = attr->mode;
-	uint32_t gc_ver = adev->ip_versions[GC_HWIP][0];
+	uint32_t if_bit;
 
-	/* under multi-vf mode, the hwmon attributes are all not supported */
-	if (amdgpu_sriov_vf(adev) && !amdgpu_sriov_is_pp_one_vf(adev))
+	if (attr == &sensor_dev_attr_temp1_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP1_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_temp1_crit.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP1_CRIT_BIT;
+	else if (attr == &sensor_dev_attr_temp1_crit_hyst.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP1_CRIT_HYST_BIT;
+	else if (attr == &sensor_dev_attr_temp2_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP2_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_temp2_crit.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP2_CRIT_BIT;
+	else if (attr == &sensor_dev_attr_temp2_crit_hyst.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP2_CRIT_HYST_BIT;
+	else if (attr == &sensor_dev_attr_temp3_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP3_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_temp3_crit.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP3_CRIT_BIT;
+	else if (attr == &sensor_dev_attr_temp3_crit_hyst.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP3_CRIT_HYST_BIT;
+	else if (attr == &sensor_dev_attr_temp1_emergency.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP1_EMERGENCY_BIT;
+	else if (attr == &sensor_dev_attr_temp2_emergency.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP2_EMERGENCY_BIT;
+	else if (attr == &sensor_dev_attr_temp3_emergency.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP3_EMERGENCY_BIT;
+	else if (attr == &sensor_dev_attr_temp1_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP1_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_temp2_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP2_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_temp3_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_TEMP3_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_pwm1.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_PWM1_BIT;
+	else if (attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_PWM1_ENABLE_BIT;
+	else if (attr == &sensor_dev_attr_pwm1_min.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_PWM1_MIN_BIT;
+	else if (attr == &sensor_dev_attr_pwm1_max.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_PWM1_MAX_BIT;
+	else if (attr == &sensor_dev_attr_fan1_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FAN1_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_fan1_min.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FAN1_MIN_BIT;
+	else if (attr == &sensor_dev_attr_fan1_max.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FAN1_MAX_BIT;
+	else if (attr == &sensor_dev_attr_fan1_target.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FAN1_TARGET_BIT;
+	else if (attr == &sensor_dev_attr_fan1_enable.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FAN1_ENABLE_BIT;
+	else if (attr == &sensor_dev_attr_in0_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_IN0_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_in0_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_IN0_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_in1_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_IN1_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_in1_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_IN1_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_power1_average.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_AVERAGE_BIT;
+	else if (attr == &sensor_dev_attr_power1_cap_max.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_CAP_MAX_BIT;
+	else if (attr == &sensor_dev_attr_power1_cap_min.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_CAP_MIN_BIT;
+	else if (attr == &sensor_dev_attr_power1_cap.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_CAP_BIT;
+	else if (attr == &sensor_dev_attr_power1_cap_default.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_CAP_DEFAULT_BIT;
+	else if (attr == &sensor_dev_attr_power1_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER1_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_power2_average.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_AVERAGE_BIT;
+	else if (attr == &sensor_dev_attr_power2_cap_max.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_CAP_MAX_BIT;
+	else if (attr == &sensor_dev_attr_power2_cap_min.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_CAP_MIN_BIT;
+	else if (attr == &sensor_dev_attr_power2_cap.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_CAP_BIT;
+	else if (attr == &sensor_dev_attr_power2_cap_default.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_CAP_DEFAULT_BIT;
+	else if (attr == &sensor_dev_attr_power2_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_POWER2_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_freq1_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FREQ1_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_freq1_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FREQ1_LABEL_BIT;
+	else if (attr == &sensor_dev_attr_freq2_input.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FREQ2_INPUT_BIT;
+	else if (attr == &sensor_dev_attr_freq2_label.dev_attr.attr)
+		if_bit = AMD_HWMON_IF_FREQ2_LABEL_BIT;
+
+	if (!(adev->pm.hwmon_if_supported & BIT_ULL(if_bit)))
 		return 0;
 
-	/* under pp one vf mode manage of hwmon attributes is not supported */
-	if (amdgpu_sriov_is_pp_one_vf(adev))
-		effective_mode &= ~S_IWUSR;
-
-	/* Skip fan attributes if fan is not present */
-	if (adev->pm.no_fan && (attr == &sensor_dev_attr_pwm1.dev_attr.attr ||
-	    attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr ||
-	    attr == &sensor_dev_attr_pwm1_max.dev_attr.attr ||
-	    attr == &sensor_dev_attr_pwm1_min.dev_attr.attr ||
-	    attr == &sensor_dev_attr_fan1_input.dev_attr.attr ||
-	    attr == &sensor_dev_attr_fan1_min.dev_attr.attr ||
-	    attr == &sensor_dev_attr_fan1_max.dev_attr.attr ||
-	    attr == &sensor_dev_attr_fan1_target.dev_attr.attr ||
-	    attr == &sensor_dev_attr_fan1_enable.dev_attr.attr))
-		return 0;
-
-	/* Skip fan attributes on APU */
-	if ((adev->flags & AMD_IS_APU) &&
-	    (attr == &sensor_dev_attr_pwm1.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_target.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_enable.dev_attr.attr))
-		return 0;
-
-	/* Skip crit temp on APU */
-	if ((adev->flags & AMD_IS_APU) && (adev->family >= AMDGPU_FAMILY_CZ) &&
-	    (attr == &sensor_dev_attr_temp1_crit.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp1_crit_hyst.dev_attr.attr))
-		return 0;
-
-	/* Skip limit attributes if DPM is not enabled */
-	if (!adev->pm.dpm_enabled &&
-	    (attr == &sensor_dev_attr_temp1_crit.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp1_crit_hyst.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_target.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_enable.dev_attr.attr))
-		return 0;
-
-	/* mask fan attributes if we have no bindings for this asic to expose */
-	if (((amdgpu_dpm_get_fan_speed_pwm(adev, NULL) == -EOPNOTSUPP) &&
-	      attr == &sensor_dev_attr_pwm1.dev_attr.attr) || /* can't query fan */
-	    ((amdgpu_dpm_get_fan_control_mode(adev, NULL) == -EOPNOTSUPP) &&
-	     attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr)) /* can't query state */
-		effective_mode &= ~S_IRUGO;
-
-	if (((amdgpu_dpm_set_fan_speed_pwm(adev, U32_MAX) == -EOPNOTSUPP) &&
-	      attr == &sensor_dev_attr_pwm1.dev_attr.attr) || /* can't manage fan */
-	      ((amdgpu_dpm_set_fan_control_mode(adev, U32_MAX) == -EOPNOTSUPP) &&
-	      attr == &sensor_dev_attr_pwm1_enable.dev_attr.attr)) /* can't manage state */
-		effective_mode &= ~S_IWUSR;
-
-	/* not implemented yet for GC 10.3.1 APUs */
-	if (((adev->family == AMDGPU_FAMILY_SI) ||
-	     ((adev->flags & AMD_IS_APU) && (gc_ver != IP_VERSION(10, 3, 1)))) &&
-	    (attr == &sensor_dev_attr_power1_cap_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power1_cap_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power1_cap.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power1_cap_default.dev_attr.attr))
-		return 0;
-
-	/* not implemented yet for APUs having <= GC 9.3.0 */
-	if (((adev->family == AMDGPU_FAMILY_SI) ||
-	     ((adev->flags & AMD_IS_APU) && (gc_ver < IP_VERSION(9, 3, 0)))) &&
-	    (attr == &sensor_dev_attr_power1_average.dev_attr.attr))
-		return 0;
-
-	/* hide max/min values if we can't both query and manage the fan */
-	if (((amdgpu_dpm_set_fan_speed_pwm(adev, U32_MAX) == -EOPNOTSUPP) &&
-	      (amdgpu_dpm_get_fan_speed_pwm(adev, NULL) == -EOPNOTSUPP) &&
-	      (amdgpu_dpm_set_fan_speed_rpm(adev, U32_MAX) == -EOPNOTSUPP) &&
-	      (amdgpu_dpm_get_fan_speed_rpm(adev, NULL) == -EOPNOTSUPP)) &&
-	    (attr == &sensor_dev_attr_pwm1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_pwm1_min.dev_attr.attr))
-		return 0;
-
-	if ((amdgpu_dpm_set_fan_speed_rpm(adev, U32_MAX) == -EOPNOTSUPP) &&
-	     (amdgpu_dpm_get_fan_speed_rpm(adev, NULL) == -EOPNOTSUPP) &&
-	     (attr == &sensor_dev_attr_fan1_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_fan1_min.dev_attr.attr))
-		return 0;
-
-	if ((adev->family == AMDGPU_FAMILY_SI ||	/* not implemented yet */
-	     adev->family == AMDGPU_FAMILY_KV) &&	/* not implemented yet */
-	    (attr == &sensor_dev_attr_in0_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_in0_label.dev_attr.attr))
-		return 0;
-
-	/* only APUs have vddnb */
-	if (!(adev->flags & AMD_IS_APU) &&
-	    (attr == &sensor_dev_attr_in1_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_in1_label.dev_attr.attr))
-		return 0;
-
-	/* no mclk on APUs */
-	if ((adev->flags & AMD_IS_APU) &&
-	    (attr == &sensor_dev_attr_freq2_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_freq2_label.dev_attr.attr))
-		return 0;
-
-	/* only SOC15 dGPUs support hotspot and mem temperatures */
-	if (((adev->flags & AMD_IS_APU) || gc_ver < IP_VERSION(9, 0, 0)) &&
-	    (attr == &sensor_dev_attr_temp2_crit.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp2_crit_hyst.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp3_crit.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp3_crit_hyst.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp1_emergency.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp2_emergency.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp3_emergency.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp2_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp3_input.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp2_label.dev_attr.attr ||
-	     attr == &sensor_dev_attr_temp3_label.dev_attr.attr))
-		return 0;
-
-	/* only Vangogh has fast PPT limit and power labels */
-	if (!(gc_ver == IP_VERSION(10, 3, 1)) &&
-	    (attr == &sensor_dev_attr_power2_average.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power2_cap_max.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power2_cap_min.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power2_cap.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power2_cap_default.dev_attr.attr ||
-	     attr == &sensor_dev_attr_power2_label.dev_attr.attr))
-		return 0;
+	effective_mode &= adev->pm.hwmon_if_attr_mode[if_bit];
 
 	return effective_mode;
 }
@@ -3309,6 +3263,133 @@ static const struct attribute_group *hwmon_groups[] = {
 	&hwmon_attrgroup,
 	NULL
 };
+
+static void amdgpu_hwmon_if_support_check(struct amdgpu_device *adev)
+{
+	uint32_t gc_ver = adev->ip_versions[GC_HWIP][0];
+	int i;
+
+	/* under multi-vf mode, the hwmon attributes are all not supported */
+	if (amdgpu_sriov_vf(adev) &&
+	    !amdgpu_sriov_is_pp_one_vf(adev)) {
+		adev->pm.hwmon_if_supported = 0;
+		return;
+	}
+
+	/* under pp one vf mode manage of hwmon attributes is not supported */
+	if (amdgpu_sriov_is_pp_one_vf(adev)) {
+		for (i = 0; i < AMD_MAX_NUMBER_OF_HWMON_IF_SUPPORTED; i++)
+			adev->pm.hwmon_if_attr_mode[i] &= ~S_IWUSR;
+	}
+
+	/* Skip fan attributes if fan is not present */
+	if (adev->pm.no_fan ||
+	    (adev->flags & AMD_IS_APU))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_PWM1_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_ENABLE_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_TARGET_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_ENABLE_BIT));
+
+	/* Skip crit temp on APU */
+	if ((adev->flags & AMD_IS_APU) &&
+	     (adev->family >= AMDGPU_FAMILY_CZ))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_TEMP1_CRIT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP1_CRIT_HYST_BIT));
+
+	/* Skip limit attributes if DPM is not enabled */
+	if (!adev->pm.dpm_enabled)
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_TEMP1_CRIT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP1_CRIT_HYST_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_ENABLE_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_TARGET_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_ENABLE_BIT));
+
+	/* mask fan attributes if we have no bindings for this asic to expose */
+	if (amdgpu_dpm_get_fan_speed_pwm(adev, NULL) == -EOPNOTSUPP)
+		adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_BIT] &= ~S_IRUGO;
+	if (amdgpu_dpm_get_fan_control_mode(adev, NULL) == -EOPNOTSUPP)
+		adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_ENABLE_BIT] &= ~S_IRUGO;
+	if (amdgpu_dpm_set_fan_speed_pwm(adev, U32_MAX) == -EOPNOTSUPP)
+		adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_BIT] &= ~S_IWUSR;
+	if (amdgpu_dpm_set_fan_control_mode(adev, U32_MAX) == -EOPNOTSUPP)
+		adev->pm.hwmon_if_attr_mode[AMD_HWMON_IF_PWM1_ENABLE_BIT] &= ~S_IWUSR;
+
+	/* not implemented yet for GC 10.3.1 APUs */
+	if ((adev->family == AMDGPU_FAMILY_SI) ||
+	     ((adev->flags & AMD_IS_APU) && (gc_ver != IP_VERSION(10, 3, 1))))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_POWER1_CAP_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER1_CAP_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER1_CAP_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER1_CAP_DEFAULT_BIT));
+
+	/* not implemented yet for APUs having <= GC 9.3.0 */
+	if ((adev->family == AMDGPU_FAMILY_SI) ||
+	     ((adev->flags & AMD_IS_APU) && (gc_ver < IP_VERSION(9, 3, 0))))
+		adev->pm.hwmon_if_supported &= ~BIT_ULL(AMD_HWMON_IF_POWER1_AVERAGE_BIT);
+
+	/* hide max/min values if we can't both query and manage the fan */
+	if ((amdgpu_dpm_set_fan_speed_pwm(adev, U32_MAX) == -EOPNOTSUPP) &&
+	     (amdgpu_dpm_get_fan_speed_pwm(adev, NULL) == -EOPNOTSUPP) &&
+	     (amdgpu_dpm_set_fan_speed_rpm(adev, U32_MAX) == -EOPNOTSUPP) &&
+	     (amdgpu_dpm_get_fan_speed_rpm(adev, NULL) == -EOPNOTSUPP))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_PWM1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_PWM1_MIN_BIT));
+
+	if ((amdgpu_dpm_set_fan_speed_rpm(adev, U32_MAX) == -EOPNOTSUPP) &&
+	     (amdgpu_dpm_get_fan_speed_rpm(adev, NULL) == -EOPNOTSUPP))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_FAN1_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FAN1_MIN_BIT));
+
+	if (adev->family == AMDGPU_FAMILY_SI ||
+	    adev->family == AMDGPU_FAMILY_KV)
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_IN0_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_IN0_LABEL_BIT));
+
+	/* only APUs have vddnb */
+	if (!(adev->flags & AMD_IS_APU))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_IN1_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_IN1_LABEL_BIT));
+
+	/* no mclk on APUs */
+	if (adev->flags & AMD_IS_APU)
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_FREQ2_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_FREQ2_LABEL_BIT));
+
+	/* only SOC15 dGPUs support hotspot and mem temperatures */
+	if ((adev->flags & AMD_IS_APU) ||
+	     gc_ver < IP_VERSION(9, 0, 0))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_TEMP2_CRIT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP2_CRIT_HYST_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP3_CRIT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP3_CRIT_HYST_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP1_EMERGENCY_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP2_EMERGENCY_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP3_EMERGENCY_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP2_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP3_INPUT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP2_LABEL_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_TEMP3_LABEL_BIT));
+
+	/* only Vangogh has fast PPT limit and power labels */
+	if (gc_ver != IP_VERSION(10, 3, 1))
+		adev->pm.hwmon_if_supported &= ~(BIT_ULL(AMD_HWMON_IF_POWER2_AVERAGE_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER2_CAP_MAX_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER2_CAP_MIN_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER2_CAP_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER2_CAP_DEFAULT_BIT) |
+						 BIT_ULL(AMD_HWMON_IF_POWER2_LABEL_BIT));
+}
 
 static void amdgpu_sysfs_if_support_check(struct amdgpu_device *adev)
 {
@@ -3417,6 +3498,8 @@ int amdgpu_pm_sysfs_init(struct amdgpu_device *adev)
 
 	if (adev->pm.dpm_enabled == 0)
 		return 0;
+
+	amdgpu_hwmon_if_support_check(adev);
 
 	amdgpu_sysfs_if_support_check(adev);
 
