@@ -3636,13 +3636,16 @@ int amdgpu_device_init(struct amdgpu_device *adev,
 	ratelimit_set_flags(&adev->throttling_logging_rs, RATELIMIT_MSG_ON_RELEASE);
 
 	/*
-	 * At default, all sysfs interfaces are claimed to be supported.
-	 * And every sysfs interface is readable and writable. However,
+	 * At default, all sysfs and hwmon interfaces are claimed to be supported.
+	 * And every interface is readable and writable. However,
 	 * each ASIC can have its own setting by overriding these.
 	 */
 	adev->pm.sysfs_if_supported = AMD_SYSFS_IF_BITMASK_ALL_SUPPORTED;
 	for (i = 0; i < AMD_MAX_NUMBER_OF_SYSFS_IF_SUPPORTED; i++)
 		adev->pm.sysfs_if_attr_mode[i] = S_IRUGO | S_IWUGO;
+	adev->pm.hwmon_if_supported = AMD_HWMON_IF_BITMASK_ALL_SUPPORTED;
+	for (i = 0; i < AMD_MAX_NUMBER_OF_HWMON_IF_SUPPORTED; i++)
+		adev->pm.hwmon_if_attr_mode[i] = S_IRUGO | S_IWUSR;
 
 	/* Registers mapping */
 	/* TODO: block userspace mapping of io register */

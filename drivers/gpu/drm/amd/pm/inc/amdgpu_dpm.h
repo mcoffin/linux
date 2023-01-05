@@ -345,6 +345,54 @@ struct config_table_setting
 #define AMD_SYSFS_IF_BITMASK(if_bit)				(1ULL << (if_bit))
 #define AMD_SYSFS_IF_BITMASK_ALL_SUPPORTED			ULLONG_MAX
 
+/* Bitmasks for controlling which hwmon interface to support */
+#define AMD_HWMON_IF_TEMP1_INPUT_BIT				0U
+#define AMD_HWMON_IF_TEMP1_CRIT_BIT				1U
+#define AMD_HWMON_IF_TEMP1_CRIT_HYST_BIT			2U
+#define AMD_HWMON_IF_TEMP2_INPUT_BIT				3U
+#define AMD_HWMON_IF_TEMP2_CRIT_BIT				4U
+#define AMD_HWMON_IF_TEMP2_CRIT_HYST_BIT			5U
+#define AMD_HWMON_IF_TEMP3_INPUT_BIT				6U
+#define AMD_HWMON_IF_TEMP3_CRIT_BIT				7U
+#define AMD_HWMON_IF_TEMP3_CRIT_HYST_BIT			8U
+#define AMD_HWMON_IF_TEMP1_EMERGENCY_BIT			9U
+#define AMD_HWMON_IF_TEMP2_EMERGENCY_BIT			10U
+#define AMD_HWMON_IF_TEMP3_EMERGENCY_BIT			11U
+#define AMD_HWMON_IF_TEMP1_LABEL_BIT				12U
+#define AMD_HWMON_IF_TEMP2_LABEL_BIT				13U
+#define AMD_HWMON_IF_TEMP3_LABEL_BIT				14U
+#define AMD_HWMON_IF_PWM1_BIT					15U
+#define AMD_HWMON_IF_PWM1_ENABLE_BIT				16U
+#define AMD_HWMON_IF_PWM1_MIN_BIT				17U
+#define AMD_HWMON_IF_PWM1_MAX_BIT				18U
+#define AMD_HWMON_IF_FAN1_INPUT_BIT				19U
+#define AMD_HWMON_IF_FAN1_MIN_BIT				20U
+#define AMD_HWMON_IF_FAN1_MAX_BIT				21U
+#define AMD_HWMON_IF_FAN1_TARGET_BIT				22U
+#define AMD_HWMON_IF_FAN1_ENABLE_BIT				23U
+#define AMD_HWMON_IF_IN0_INPUT_BIT				24U
+#define AMD_HWMON_IF_IN0_LABEL_BIT				25U
+#define AMD_HWMON_IF_IN1_INPUT_BIT				26U
+#define AMD_HWMON_IF_IN1_LABEL_BIT				27U
+#define AMD_HWMON_IF_POWER1_AVERAGE_BIT				28U
+#define AMD_HWMON_IF_POWER1_CAP_MAX_BIT				29U
+#define AMD_HWMON_IF_POWER1_CAP_MIN_BIT				30U
+#define AMD_HWMON_IF_POWER1_CAP_BIT				31U
+#define AMD_HWMON_IF_POWER1_CAP_DEFAULT_BIT			32U
+#define AMD_HWMON_IF_POWER1_LABEL_BIT				33U
+#define AMD_HWMON_IF_POWER2_AVERAGE_BIT				34U
+#define AMD_HWMON_IF_POWER2_CAP_MAX_BIT				35U
+#define AMD_HWMON_IF_POWER2_CAP_MIN_BIT				36U
+#define AMD_HWMON_IF_POWER2_CAP_BIT				37U
+#define AMD_HWMON_IF_POWER2_CAP_DEFAULT_BIT			38U
+#define AMD_HWMON_IF_POWER2_LABEL_BIT				39U
+#define AMD_HWMON_IF_FREQ1_INPUT_BIT				40U
+#define AMD_HWMON_IF_FREQ1_LABEL_BIT				41U
+#define AMD_HWMON_IF_FREQ2_INPUT_BIT				42U
+#define AMD_HWMON_IF_FREQ2_LABEL_BIT				43U
+#define AMD_MAX_NUMBER_OF_HWMON_IF_SUPPORTED			64U
+#define AMD_HWMON_IF_BITMASK_ALL_SUPPORTED			ULLONG_MAX
+
 struct amdgpu_pm {
 	struct mutex		mutex;
 	u32                     current_sclk;
@@ -401,6 +449,10 @@ struct amdgpu_pm {
 	/* bitmasks for clarifying which sysfs interfaces supported */
 	uint64_t		sysfs_if_supported;
 	umode_t			sysfs_if_attr_mode[AMD_MAX_NUMBER_OF_SYSFS_IF_SUPPORTED];
+
+	/* bitmasks for clarifying which hwmon interfaces supported */
+	uint64_t		hwmon_if_supported;
+	umode_t			hwmon_if_attr_mode[AMD_MAX_NUMBER_OF_HWMON_IF_SUPPORTED];
 };
 
 int amdgpu_dpm_read_sensor(struct amdgpu_device *adev, enum amd_pp_sensors sensor,
