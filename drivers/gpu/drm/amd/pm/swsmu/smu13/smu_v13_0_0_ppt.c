@@ -2376,4 +2376,13 @@ void smu_v13_0_0_set_ppt_funcs(struct smu_context *smu)
 	smu->pwr_src_map = smu_v13_0_0_pwr_src_map;
 	smu->workload_map = smu_v13_0_0_workload_map;
 	smu_v13_0_0_set_smu_mailbox_registers(smu);
+	/* Unset those legacy interfaces which are not supported */
+	smu->adev->pm.sysfs_if_supported &= ~(BIT_ULL(AMD_SYSFS_IF_POWER_DPM_STATE_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_NUM_STATES_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_CUR_STATE_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_FORCE_STATE_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_TABLE_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_DPM_DCEFCLK_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_SCLK_OD_BIT) |
+					      BIT_ULL(AMD_SYSFS_IF_PP_MCLK_OD_BIT));
 }
