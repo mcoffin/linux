@@ -712,8 +712,9 @@ static int smu_late_init(void *handle)
 	if (!amdgpu_sriov_vf(adev) || smu->od_enabled) {
 		ret = smu_set_default_od_settings(smu);
 		if (ret) {
-			dev_err(adev->dev, "Failed to setup default OD settings!\n");
-			return ret;
+			smu->od_enabled = false;
+			dev_warn(adev->dev, "Failed to setup default OD settings! (%d)\n", ret);
+			ret = 0;
 		}
 	}
 
