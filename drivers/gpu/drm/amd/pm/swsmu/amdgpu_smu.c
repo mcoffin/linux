@@ -607,6 +607,7 @@ static int smu_set_funcs(struct amdgpu_device *adev)
 		break;
 	case IP_VERSION(13, 0, 0):
 	case IP_VERSION(13, 0, 10):
+		smu->od_enabled = true;
 		smu_v13_0_0_set_ppt_funcs(smu);
 		break;
 	case IP_VERSION(13, 0, 7):
@@ -1210,7 +1211,7 @@ static int smu_smc_hw_setup(struct smu_context *smu)
 		return ret;
 	}
 
-	/* smu_dump_pptable(smu); */
+	// smu_dump_pptable(smu);
 
 	/*
 	 * With SCPM enabled, PSP is responsible for the PPTable transferring
