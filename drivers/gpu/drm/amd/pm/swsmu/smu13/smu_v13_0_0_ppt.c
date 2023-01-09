@@ -2066,6 +2066,116 @@ static int smu_v13_0_0_send_bad_mem_channel_flag(struct smu_context *smu,
 	return ret;
 }
 
+static int smu_v13_0_0_od_setting_check_range(struct amdgpu_device *adev,
+						 struct smu_13_0_0_overdrive_table *od_settings,
+						 enum SMU_13_0_0_ODSETTING_ID setting,
+						 uint32_t value)
+{
+	if (value < od_settings->min[setting]) {
+		dev_warn(adev->dev, "OD setting (%d, %d) is less than the minimum allowed (%d)\n",
+					  setting, value, od_settings->min[setting]);
+		return -EINVAL;
+	}
+	if (value > od_settings->max[setting]) {
+		dev_warn(adev->dev, "OD setting (%d, %d) is greater than the maximum allowed (%d)\n",
+					  setting, value, od_settings->max[setting]);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
+                                         enum PP_OD_DPM_TABLE_COMMAND type,
+					 long input[], uint32_t size)
+{
+	struct smu_table_context *table_context = &smu->smu_table;
+	OverDriveTable_t *od_table =
+		(OverDriveTable_t *)table_context->overdrive_table;
+	struct smu_13_0_0_overdrive_table *od_settings =
+		(struct smu_13_0_0_overdrive_table *)smu->od_settings;
+	enum SMU_13_0_0_ODSETTING_ID freq_setting;
+	uint16_t *freq_ptr;
+	int ret = 0;
+	int i;
+
+	if (!smu->od_enabled) {
+		dev_warn(smu->adev->dev, "OverDrive is not enabled!\n");
+		return -EINVAL;
+	}
+
+	if (!smu->od_settings) {
+		dev_err(smu->adev->dev, "OD board limits are not set!\n");
+		return -ENOENT;
+	}
+
+	if (!(table_context->overdrive_table && table_context->boot_overdrive_table)) {
+		dev_err(smu->adev->dev, "Overdrive table was not initialized!\n");
+		return -EINVAL;
+	}
+
+	switch (type) {
+	case PP_OD_EDIT_SCLK_VDDC_TABLE:
+		if (!od_settings->cap[SMU_13_0_0_ODCAP_GFXCLK_LIMITS]) {
+			dev_err(smu->adev->dev, "GFXCLK_LIMITS not supported\n");
+			return -ENOTSUPP;
+		}
+		if ((size % 2) != 0) {
+			dev_warn(smu->adev->dev, "Invalid number of parameters for PP_OD_EDIT_SCLK_VDDC_TABLE\n");
+			return -EINVAL;
+		}
+		for (i = 0; i < size; i += 2) {
+			switch (input[i]) {
+			case 0:
+				if (input[i + 1] > od_table->GfxclkFmax) {
+					dev_warn(smu->adev->dev, "GfxclkFmin (%ld) must be <= GfxclkFmax (%u)!\n", input[i + 1], od_table->GfxclkFmax);
+					return -EINVAL;
+				}
+				freq_setting = SMU_13_0_0_ODSETTING_GFXCLKFMIN;
+				freq_ptr = &od_table->GfxclkFmin;
+				break;
+			case 1:
+				if (input[i + 1] < od_table->GfxclkFmin) {
+					dev_info(smu->adev->dev, "GfxclkFmax (%ld) must be >= GfxclkFmin (%u)!\n",
+						input[i + 1], od_table->GfxclkFmin);
+					return -EINVAL;
+				}
+
+				freq_setting = SMU_13_0_0_ODSETTING_GFXCLKFMAX;
+				freq_ptr = &od_table->GfxclkFmax;
+				break;
+
+			default:
+				dev_info(smu->adev->dev, "Invalid SCLK_VDDC_TABLE index: %ld\n", input[i]);
+				dev_info(smu->adev->dev, "Supported indices: [0:min,1:max]\n");
+				return -EINVAL;
+			}
+			ret = smu_v13_0_0_od_setting_check_range(smu->adev, od_settings, freq_setting, input[i + 1]);
+			if (ret)
+				return ret;
+			*freq_ptr = (uint16_t)input[i + 1];
+		}
+		break;
+	case PP_OD_RESTORE_DEFAULT_TABLE:
+		memcpy(table_context->overdrive_table, table_context->boot_overdrive_table, sizeof(OverDriveTable_t));
+		fallthrough;
+	case PP_OD_COMMIT_DPM_TABLE:
+		if (!memcmp(od_table, table_context->user_overdrive_table, sizeof(OverDriveTable_t)))
+			break;
+		ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, (void*)od_table, true);
+		if (ret) {
+			dev_err(smu->adev->dev, "Failed to commit overdrive table! (%d)\n", ret);
+			return ret;
+		}
+		memcpy(table_context->user_overdrive_table, od_table, sizeof(OverDriveTable_t));
+		smu->user_dpm_profile.user_od = memcmp(table_context->user_overdrive_table, table_context->boot_overdrive_table, sizeof(OverDriveTable_t));
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+	return 0;
+}
+
 static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.get_allowed_feature_mask = smu_v13_0_0_get_allowed_feature_mask,
 	.set_default_dpm_table = smu_v13_0_0_set_default_dpm_table,
@@ -2140,7 +2250,8 @@ static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.send_hbm_bad_channel_flag = smu_v13_0_0_send_bad_mem_channel_flag,
 	.gpo_control = smu_v13_0_gpo_control,
 	.set_default_od_settings = smu_cmn_set_default_od_settings,
-	.restore_user_od_settings = smu_cmn_restore_user_od_settings
+	.restore_user_od_settings = smu_cmn_restore_user_od_settings,
+	.od_edit_dpm_table = smu_v13_0_0_od_edit_dpm_table
 };
 
 void smu_v13_0_0_set_ppt_funcs(struct smu_context *smu)
