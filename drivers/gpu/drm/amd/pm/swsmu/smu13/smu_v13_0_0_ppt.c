@@ -214,7 +214,7 @@ static struct cmn2asic_mapping smu_v13_0_0_feature_mask_map[SMU_FEATURE_COUNT] =
 	FEA_MAP(SOC_PCC),
 	[SMU_FEATURE_DPM_VCLK_BIT] = {1, FEATURE_MM_DPM_BIT},
 	[SMU_FEATURE_DPM_DCLK_BIT] = {1, FEATURE_MM_DPM_BIT},
-	[SMU_FEATURE_PPT_BIT] = {1, FEATURE_THROTTLERS_BIT},
+	[SMU_FEATURE_PPT_BIT] = {1, FEATURE_THROTTLERS_BIT}
 };
 
 static struct cmn2asic_mapping smu_v13_0_0_table_map[SMU_TABLE_COUNT] = {
@@ -1001,6 +1001,38 @@ static int smu_v13_0_0_get_current_clk_freq_by_table(struct smu_context *smu,
 						value);
 }
 
+struct smu_13_0_0_od_range_mapping {
+	uint8_t valid;
+	enum SMU_13_0_0_ODFEATURE_CAP cap;
+	enum SMU_13_0_0_ODSETTING_ID settings[2];
+	size_t offsets[2];
+	const char* name;
+};
+
+static void smu_v13_0_0_load_od_range(const struct smu_13_0_0_od_range_mapping* m, OverDriveTable_t* od_table, uint16_t out[])
+{
+	for (unsigned int i = 0; i < 2; i++) {
+		out[i] = *(uint16_t*)((void*)od_table + m->offsets[i]);
+	}
+}
+
+static const struct smu_13_0_0_od_range_mapping clk2od_mapping[SMU_CLK_COUNT] = {
+	[SMU_OD_SCLK] =
+		{
+			1, SMU_13_0_0_ODCAP_GFXCLK_LIMITS,
+			{SMU_13_0_0_ODSETTING_GFXCLKFMIN, SMU_13_0_0_ODSETTING_GFXCLKFMAX},
+			{offsetof(OverDriveTable_t, GfxclkFmin), offsetof(OverDriveTable_t, GfxclkFmax)},
+			"OD_SCLK"
+		},
+	[SMU_OD_MCLK] =
+		{
+			1, SMU_13_0_0_ODCAP_UCLK_LIMITS,
+			{SMU_13_0_0_ODSETTING_UCLKFMIN, SMU_13_0_0_ODSETTING_UCLKFMAX},
+			{offsetof(OverDriveTable_t, UclkFmin), offsetof(OverDriveTable_t, UclkFmax)},
+			"OD_MCLK"
+		},
+};
+
 static int smu_v13_0_0_print_clk_levels(struct smu_context *smu,
 					enum smu_clk_type clk_type,
 					char *buf)
@@ -1009,10 +1041,14 @@ static int smu_v13_0_0_print_clk_levels(struct smu_context *smu,
 	struct smu_13_0_dpm_context *dpm_context = smu_dpm->dpm_context;
 	struct smu_13_0_dpm_table *single_dpm_table;
 	struct smu_13_0_pcie_table *pcie_table;
+	const struct smu_13_0_0_od_range_mapping *od_mapping;
 	const int link_width[] = {0, 1, 2, 4, 8, 12, 16};
 	uint32_t gen_speed, lane_width;
 	int i, curr_freq, size = 0;
 	int ret = 0;
+	struct smu_13_0_0_overdrive_table* od_settings = smu->od_settings;
+	OverDriveTable_t* od_table = smu->smu_table.overdrive_table;
+	uint16_t od_range[2]; uint32_t od_limit[2];
 
 	smu_cmn_get_sysfs_buf(&buf, &size);
 
@@ -1127,7 +1163,32 @@ static int smu_v13_0_0_print_clk_levels(struct smu_context *smu,
 					(lane_width == link_width[pcie_table->pcie_lane[i]]) ?
 					"*" : "");
 		break;
-
+	case SMU_OD_CCLK:
+	case SMU_OD_SCLK:
+	case SMU_OD_MCLK:
+		if (!smu->od_enabled || !od_table || !od_settings)
+			break;
+		od_mapping = &clk2od_mapping[clk_type];
+		if (!od_mapping->valid || !od_settings->cap[od_mapping->cap])
+			break;
+		size += sysfs_emit_at(buf, size, "%s:\n", od_mapping->name);
+		smu_v13_0_0_load_od_range(od_mapping, od_table, &od_range[0]);
+		size += sysfs_emit_at(buf, size, "0: %uMHz\n1: %uMHz\n", od_range[0], od_range[1]);
+		break;
+	case SMU_OD_RANGE:
+		if (!smu->od_enabled || !od_table || !od_settings)
+			break;
+		for (unsigned int i = 0; i < SMU_CLK_COUNT; i++) {
+			if (!clk2od_mapping[i].valid || !od_settings->cap[clk2od_mapping[i].cap])
+				continue;
+			// We only really care about min values for the min, and vice-versa
+			od_limit[0] = od_settings->min[clk2od_mapping[i].settings[0]];
+			od_limit[1] = od_settings->max[clk2od_mapping[i].settings[1]];
+			size += sysfs_emit_at(buf, size, "%s: %uMHz %uMHz\n", clk2od_mapping[i].name, od_limit[0], od_limit[1]);
+		}
+		break;
+	// case SMU_OD_VDDC_CURVE:
+	// case SMU_OD_VDDGFX_OFFSET:
 	default:
 		break;
 	}
@@ -2042,6 +2103,7 @@ static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.send_hbm_bad_channel_flag = smu_v13_0_0_send_bad_mem_channel_flag,
 	.gpo_control = smu_v13_0_gpo_control,
 	.set_default_od_settings = smu_cmn_set_default_od_settings,
+	.restore_user_od_settings = smu_cmn_restore_user_od_settings
 };
 
 void smu_v13_0_0_set_ppt_funcs(struct smu_context *smu)
