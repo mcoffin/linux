@@ -465,6 +465,12 @@ int smu_v13_0_init_smc_tables(struct smu_context *smu)
 	struct smu_table_context *smu_table = &smu->smu_table;
 	struct smu_table *tables = smu_table->tables;
 	int ret = 0;
+	unsigned int i = 0;
+	void** overdrive_tables[3] = {
+		&smu_table->overdrive_table,
+		&smu_table->boot_overdrive_table,
+		&smu_table->user_overdrive_table
+	};
 
 	smu_table->driver_pptable =
 		kzalloc(tables[SMU_TABLE_PPTABLE].size, GFP_KERNEL);
@@ -482,18 +488,13 @@ int smu_v13_0_init_smc_tables(struct smu_context *smu)
 
 	/* Aldebaran does not support OVERDRIVE */
 	if (tables[SMU_TABLE_OVERDRIVE].size) {
-		smu_table->overdrive_table =
-			kzalloc(tables[SMU_TABLE_OVERDRIVE].size, GFP_KERNEL);
-		if (!smu_table->overdrive_table) {
-			ret = -ENOMEM;
-			goto err2_out;
-		}
-
-		smu_table->boot_overdrive_table =
-			kzalloc(tables[SMU_TABLE_OVERDRIVE].size, GFP_KERNEL);
-		if (!smu_table->boot_overdrive_table) {
-			ret = -ENOMEM;
-			goto err3_out;
+		for (i = 0; i < 3; i++) {
+			*overdrive_tables[i] =
+				kzalloc(tables[SMU_TABLE_OVERDRIVE].size, GFP_KERNEL);
+			if (!*overdrive_tables[i]) {
+				ret = -ENOMEM;
+				goto err_od_out;
+			}
 		}
 	}
 
@@ -508,10 +509,12 @@ int smu_v13_0_init_smc_tables(struct smu_context *smu)
 
 err4_out:
 	kfree(smu_table->boot_overdrive_table);
-err3_out:
-	kfree(smu_table->overdrive_table);
-err2_out:
-	kfree(smu_table->max_sustainable_clocks);
+err_od_out:
+	for (;i >= 0; i--) {
+		if (!*overdrive_tables[i])
+			continue;
+		kfree(*overdrive_tables[i]);
+	}
 err1_out:
 	kfree(smu_table->driver_pptable);
 err0_out:
