@@ -1063,8 +1063,8 @@ int smu_cmn_set_default_od_settings(struct smu_context* smu)
 	};
 	int ret = 0;
 
-	dev_warn(smu->adev->dev, "size: %llu, boot_table: %p, overdrive_table: %p, user_overdrive_table: %p\n",
-			od_table_size, boot_table, copy_tables[0], copy_tables[1]);
+	dev_warn(smu->adev->dev, "size: %llu, boot_table: %p, overdrive_table: %p, user_overdrive_table: %p, od_enabled: %s\n",
+			od_table_size, boot_table, copy_tables[0], copy_tables[1], smu->od_enabled ? "true" : "false");
 
 	// If there's no overdrive tables, we have nothing to do.
 	if (!od_table_size || !boot_table) {
@@ -1098,4 +1098,19 @@ int smu_cmn_set_default_od_settings(struct smu_context* smu)
 	dev_warn(smu->adev->dev, "Copied boot-time OD settings\n");
 
 	return 0;
+}
+
+int smu_cmn_restore_user_od_settings(struct smu_context *smu) {
+	struct smu_table_context *table_context = &smu->smu_table;
+	void *user_od_table = table_context->user_overdrive_table;
+	int ret = 0;
+
+	if (!user_od_table)
+		return -ENOTSUPP;
+
+	ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, (void *)user_od_table, true);
+	if (ret)
+		dev_err(smu->adev->dev, "Failed to import overdrive table!\n");
+
+	return ret;
 }
