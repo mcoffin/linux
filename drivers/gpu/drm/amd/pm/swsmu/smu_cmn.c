@@ -1052,3 +1052,50 @@ bool smu_cmn_is_audio_func_enabled(struct amdgpu_device *adev)
 
 	return snd_driver_loaded;
 }
+
+int smu_cmn_set_default_od_settings(struct smu_context* smu)
+{
+	uint64_t od_table_size = smu->smu_table.tables[SMU_TABLE_OVERDRIVE].size;
+	void* boot_table = smu->smu_table.boot_overdrive_table;
+	void *copy_tables[2] = {
+		smu->smu_table.overdrive_table,
+		smu->smu_table.user_overdrive_table,
+	};
+	int ret = 0;
+
+	dev_warn(smu->adev->dev, "size: %llu, boot_table: %p, overdrive_table: %p, user_overdrive_table: %p\n",
+			od_table_size, boot_table, copy_tables[0], copy_tables[1]);
+
+	// If there's no overdrive tables, we have nothing to do.
+	if (!od_table_size || !boot_table) {
+		dev_err(smu->adev->dev, "OverDrive enabled but OD tables were not set up!\n");
+		return 0;
+	}
+
+	/*
+	 * For S3/S4/Runpm resume, no need to setup those overdrive tables again as
+	 *   - either they already have the default OD settings got during cold bootup
+	 *   - or they have some user customized OD settings which cannot be overwritten
+	 */
+	if (smu->adev->in_suspend)
+		return 0;
+
+	ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, boot_table, false);
+	if (ret) {
+		dev_err(smu->adev->dev, "Failed to get overdrive table!\n");
+		return ret;
+	}
+
+	// TODO: dump_od_table
+
+	for (unsigned int i = 0; i < 2; i++) {
+		// Some ASICs only bother allocating a few of these
+		if (!copy_tables[i])
+			continue;
+		memcpy(copy_tables[i], boot_table, od_table_size);
+	}
+
+	dev_warn(smu->adev->dev, "Copied boot-time OD settings\n");
+
+	return 0;
+}
