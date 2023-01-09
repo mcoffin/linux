@@ -523,6 +523,8 @@ int smu_v13_0_fini_smc_tables(struct smu_context *smu)
 	struct smu_table_context *smu_table = &smu->smu_table;
 	struct smu_dpm_context *smu_dpm = &smu->smu_dpm;
 
+	dev_warn(smu->adev->dev, "smu_v13_0_fini_smc_tables\n");
+
 	kfree(smu_table->gpu_metrics_table);
 	kfree(smu_table->combo_pptable);
 	kfree(smu_table->boot_overdrive_table);
