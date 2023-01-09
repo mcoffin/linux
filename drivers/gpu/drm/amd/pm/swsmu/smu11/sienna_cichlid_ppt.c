@@ -2135,39 +2135,6 @@ static void sienna_cichlid_dump_od_table(struct smu_context *smu,
 		dev_dbg(smu->adev->dev, "OD: VddGfxOffset: %d\n", od_table->VddGfxOffset);
 }
 
-static int sienna_cichlid_set_default_od_settings(struct smu_context *smu)
-{
-	OverDriveTable_t *od_table =
-		(OverDriveTable_t *)smu->smu_table.overdrive_table;
-	OverDriveTable_t *boot_od_table =
-		(OverDriveTable_t *)smu->smu_table.boot_overdrive_table;
-	OverDriveTable_t *user_od_table =
-		(OverDriveTable_t *)smu->smu_table.user_overdrive_table;
-	int ret = 0;
-
-	/*
-	 * For S3/S4/Runpm resume, no need to setup those overdrive tables again as
-	 *   - either they already have the default OD settings got during cold bootup
-	 *   - or they have some user customized OD settings which cannot be overwritten
-	 */
-	if (smu->adev->in_suspend)
-		return 0;
-
-	ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE,
-				   0, (void *)boot_od_table, false);
-	if (ret) {
-		dev_err(smu->adev->dev, "Failed to get overdrive table!\n");
-		return ret;
-	}
-
-	sienna_cichlid_dump_od_table(smu, boot_od_table);
-
-	memcpy(od_table, boot_od_table, sizeof(OverDriveTable_t));
-	memcpy(user_od_table, boot_od_table, sizeof(OverDriveTable_t));
-
-	return 0;
-}
-
 static int sienna_cichlid_od_setting_check_range(struct smu_context *smu,
 						 struct smu_11_0_7_overdrive_table *od_table,
 						 enum SMU_11_0_7_ODSETTING_ID setting,
@@ -4398,7 +4365,7 @@ static const struct pptable_funcs sienna_cichlid_ppt_funcs = {
 	.mode1_reset = smu_v11_0_mode1_reset,
 	.get_dpm_ultimate_freq = sienna_cichlid_get_dpm_ultimate_freq,
 	.set_soft_freq_limited_range = smu_v11_0_set_soft_freq_limited_range,
-	.set_default_od_settings = sienna_cichlid_set_default_od_settings,
+	.set_default_od_settings = smu_cmn_set_default_od_settings,
 	.od_edit_dpm_table = sienna_cichlid_od_edit_dpm_table,
 	.restore_user_od_settings = smu_v11_0_restore_user_od_settings,
 	.run_btc = sienna_cichlid_run_btc,
