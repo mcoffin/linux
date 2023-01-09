@@ -315,6 +315,36 @@ smu_v13_0_0_get_allowed_feature_mask(struct smu_context *smu,
 	return 0;
 }
 
+static void smu_v13_0_0_dump_od_settings(struct amdgpu_device *adev, struct smu_13_0_0_overdrive_table* od_settings) {
+	for (unsigned int i = 0; i < SMU_13_0_0_ODCAP_COUNT; i++) {
+#define HANDLE_CAP(capability) case capability: \
+		dev_info(adev->dev, "%s[%u] %s - [%u,%u]\n", #capability, i, od_settings->cap[i] ? "true" : "false", od_settings->min[i], od_settings->max[i]); \
+		break;
+		switch (i) {
+		HANDLE_CAP(SMU_13_0_0_ODCAP_GFXCLK_LIMITS);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_GFXCLK_CURVE);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_UCLK_LIMITS);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_POWER_LIMIT);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_FAN_ACOUSTIC_LIMIT);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_FAN_SPEED_MIN);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_TEMPERATURE_FAN);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_TEMPERATURE_SYSTEM);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_MEMORY_TIMING_TUNE);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_FAN_ZERO_RPM_CONTROL);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_AUTO_UV_ENGINE);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_AUTO_OC_ENGINE);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_AUTO_OC_MEMORY);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_FAN_CURVE);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_AUTO_FAN_ACOUSTIC_LIMIT);
+		HANDLE_CAP(SMU_13_0_0_ODCAP_POWER_MODE);
+		default:
+			dev_info(adev->dev, "%s[%u] %s - [%u,%u]\n", "ODCAP", i, od_settings->cap[i] ? "true" : "false", od_settings->min[i], od_settings->max[i]);
+			break;
+		}
+#undef HANDLE_CAP
+	}
+}
+
 static int smu_v13_0_0_check_powerplay_table(struct smu_context *smu)
 {
 	struct smu_table_context *table_context = &smu->smu_table;
@@ -340,6 +370,8 @@ static int smu_v13_0_0_check_powerplay_table(struct smu_context *smu)
 	 * smu->od_settings just points to the actual overdrive_table
 	 */
 	smu->od_settings = &powerplay_table->overdrive_table;
+
+	smu_v13_0_0_dump_od_settings(smu->adev, smu->od_settings);
 
 	return 0;
 }

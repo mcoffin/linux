@@ -1213,7 +1213,7 @@ static int smu_smc_hw_setup(struct smu_context *smu)
 		return ret;
 	}
 
-	// smu_dump_pptable(smu);
+	smu_dump_pptable(smu);
 
 	/*
 	 * With SCPM enabled, PSP is responsible for the PPTable transferring
