@@ -519,11 +519,13 @@ int amdgpu_overdrive_ioctl(struct drm_device *dev, void *data, struct drm_file *
 	struct amdgpu_device *adev = drm_to_adev(dev);
 	struct drm_amdgpu_overdrive *info = data;
 
+	dev_info(adev->dev, "amdgpu_overdrive_ioctl called: operation: %u\n", info->operation);
+
 	switch (info->operation) {
 	case AMDGPU_OVERDRIVE_SET:
 		return amdgpu_dpm_set_od_setting(adev, info->setting, info->value);
 	case AMDGPU_OVERDRIVE_COMMIT:
-		return -ENOSYS;
+		return amdgpu_dpm_commit_overdrive_table(adev);
 	default:
 		return -EINVAL;
 	}

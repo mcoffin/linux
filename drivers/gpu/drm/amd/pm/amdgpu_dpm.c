@@ -1761,3 +1761,7 @@ int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint
 	mutex_unlock(&adev->pm.mutex);
 	return ret;
 }
+
+int amdgpu_dpm_commit_overdrive_table(struct amdgpu_device *adev) {
+	return amdgpu_dpm_odn_edit_dpm_table(adev, PP_OD_COMMIT_DPM_TABLE, NULL, 0);
+}
