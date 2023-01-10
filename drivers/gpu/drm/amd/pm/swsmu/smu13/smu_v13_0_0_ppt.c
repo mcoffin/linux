@@ -2171,6 +2171,49 @@ static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
 	return 0;
 }
 
+enum od_setting_type {
+	SMU_13_0_0_ODSETTING_TYPE_I16,
+};
+
+struct setting2table_mapping {
+	uint8_t valid;
+	size_t offset;
+	enum od_setting_type ty;
+};
+
+#define SETTING_MAP(setting, field, ty) [setting] = {1, offsetof(OverDriveTable_t, field), ty}
+static const struct setting2table_mapping od_to_table[SMU_13_0_0_ODSETTING_COUNT] = {
+	SETTING_MAP(SMU_13_0_0_ODSETTING_GFXCLKFMIN, GfxclkFmin, SMU_13_0_0_ODSETTING_TYPE_I16),
+	SETTING_MAP(SMU_13_0_0_ODSETTING_GFXCLKFMAX, GfxclkFmax, SMU_13_0_0_ODSETTING_TYPE_I16),
+};
+#undef SETTING_MAP
+
+int smu_v13_0_0_set_od_setting(struct smu_context *smu, uint32_t setting, uint32_t value)
+{
+	struct smu_13_0_0_overdrive_table *od_settings = smu->od_settings;
+	OverDriveTable_t *od_table = smu->smu_table.overdrive_table;
+	const struct setting2table_mapping *m = NULL;
+	if (!smu->od_enabled || !od_settings || !od_table)
+		return -EOPNOTSUPP;
+	if (setting > SMU_13_0_0_ODSETTING_COUNT)
+		return -EINVAL;
+	m = &od_to_table[setting];
+	if (!m->valid || !od_settings->cap[setting])
+		return -EOPNOTSUPP;
+	if (value < od_settings->min[setting] || value > od_settings->max[setting])
+		return -EINVAL;
+	switch (m->ty) {
+	case SMU_13_0_0_ODSETTING_TYPE_I16:
+		int16_t* p = (int16_t*)((void*)od_table + m->offset);
+		*p = value;
+		break;
+	default:
+		dev_err(smu->adev->dev, "Invalid type found in settings map: %d\n", m->ty);
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.get_allowed_feature_mask = smu_v13_0_0_get_allowed_feature_mask,
 	.set_default_dpm_table = smu_v13_0_0_set_default_dpm_table,
@@ -2246,7 +2289,8 @@ static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.gpo_control = smu_v13_0_gpo_control,
 	.set_default_od_settings = smu_cmn_set_default_od_settings,
 	.restore_user_od_settings = smu_cmn_restore_user_od_settings,
-	.od_edit_dpm_table = smu_v13_0_0_od_edit_dpm_table
+	.od_edit_dpm_table = smu_v13_0_0_od_edit_dpm_table,
+	.set_od_setting = smu_v13_0_0_set_od_setting
 };
 
 void smu_v13_0_0_set_ppt_funcs(struct smu_context *smu)
