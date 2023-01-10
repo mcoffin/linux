@@ -557,4 +557,6 @@ int amdgpu_dpm_get_dpm_clock_table(struct amdgpu_device *adev,
 				   struct dpm_clocks *clock_table);
 int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint32_t value);
 
+int amdgpu_dpm_commit_overdrive_table(struct amdgpu_device *adev);
+
 #endif
