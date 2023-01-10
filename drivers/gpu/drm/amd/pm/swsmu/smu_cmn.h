@@ -147,7 +147,30 @@ struct overdrive_mapping {
 	const char *label;
 };
 
-int smu_cmn_print_od_settings(struct smu_context *smu, unsigned int first_setting, size_t n_settings, const overdrive_mapping *mapping, void *od_table, uint8_t *capabilities, uint32_t *min_limits, uint32_t *max_limits, char *buf);
+#define OD_MAP(setting, reqs, field, ty) [setting]={1, reqs, offsetof(OverDriveTable_t, field), overdrive_value_##ty, #setting}
+
+int smu_cmn_print_od_settings(
+	struct smu_context *smu,
+	unsigned int first_setting,
+	size_t n_settings,
+	struct overdrive_mapping *mapping,
+	void *od_table,
+	uint64_t capabilities,
+	uint32_t *min_limits,
+	uint32_t *max_limits,
+	char *buf
+);
+int smu_cmn_set_od_setting(
+	struct smu_context *smu,
+	unsigned int setting,
+	size_t n_settings,
+	struct overdrive_mapping *mapping,
+	void *od_table,
+	uint64_t capabilities,
+	uint32_t *min_limits,
+	uint32_t *max_limits,
+	int64_t *value
+);
 
 #endif
 #endif

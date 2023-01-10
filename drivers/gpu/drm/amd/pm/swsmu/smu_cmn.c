@@ -1114,3 +1114,114 @@ int smu_cmn_restore_user_od_settings(struct smu_context *smu) {
 
 	return ret;
 }
+
+int smu_cmn_print_od_settings(
+	struct smu_context *smu,
+	unsigned int setting,
+	size_t n_settings,
+	struct overdrive_mapping *mapping,
+	void *od_table,
+	uint64_t capabilities,
+	uint32_t *min_limits,
+	uint32_t *max_limits,
+	char *buf
+) {
+	int size = 0;
+	struct overdrive_mapping *m;
+
+	smu_cmn_get_sysfs_buf(&buf, &size);
+	// size += sysfs_emit_at(buf, size, "label,enabled,min_value,max_value,value\n");
+	for (n_settings += setting; setting < n_settings; setting++) {
+		m = &mapping[setting];
+		if (!m || !m->valid)
+			continue;
+		bool enabled = (capabilities & m->requirements) != 0;
+		uint32_t limits[2] = {
+			min_limits[setting],
+			max_limits[setting]
+		};
+		void *value = od_table + m->offset;
+		size += sysfs_emit_at(buf, size, "%s,%s,%u,%u,", m->label, enabled ? "true" : "false", limits[0], limits[1]);
+		switch (m->type) {
+		case overdrive_value_u8:
+			size += sysfs_emit_at(buf, size, "%u\n", *(uint8_t *)value);
+			break;
+		case overdrive_value_i8:
+			size += sysfs_emit_at(buf, size, "%d\n", *(int8_t *)value);
+			break;
+		case overdrive_value_u16:
+			size += sysfs_emit_at(buf, size, "%u\n", *(uint16_t *)value);
+			break;
+		case overdrive_value_i16:
+			size += sysfs_emit_at(buf, size, "%d\n", *(int16_t *)value);
+			break;
+		case overdrive_value_u32:
+			size += sysfs_emit_at(buf, size, "%u\n", *(uint32_t *)value);
+			break;
+		case overdrive_value_i32:
+			size += sysfs_emit_at(buf, size, "%d\n", *(int32_t *)value);
+			break;
+		case overdrive_value_u64:
+			size += sysfs_emit_at(buf, size, "%llu\n", *(uint64_t *)value);
+			break;
+		case overdrive_value_i64:
+			size += sysfs_emit_at(buf, size, "%lld\n", *(int64_t *)value);
+			break;
+		}
+	}
+	return 0;
+}
+
+int smu_cmn_set_od_setting(
+	struct smu_context *smu,
+	unsigned int setting,
+	size_t n_settings,
+	struct overdrive_mapping *mapping,
+	void *od_table,
+	uint64_t capabilities,
+	uint32_t *min_limits,
+	uint32_t *max_limits,
+	int64_t *value
+) {
+	struct overdrive_mapping *m;
+	void *target;
+	if (setting > n_settings)
+		return -EINVAL;
+	m = &mapping[setting];
+	if (!m || !m->valid)
+		return -EINVAL;
+	if (!(capabilities & m->requirements))
+		return -ENOTSUPP;
+#define handle_type(ty) \
+	if ((*(ty*)value > max_limits[setting]) || (*(ty*)value < min_limits[setting]))\
+		return -EINVAL;\
+	*(ty*)(target) = *(ty*)value;
+	switch (m->type) {
+	case overdrive_value_u8:
+		handle_type(uint8_t);
+		break;
+	case overdrive_value_i8:
+		handle_type(int8_t);
+		break;
+	case overdrive_value_u16:
+		handle_type(uint16_t);
+		break;
+	case overdrive_value_i16:
+		handle_type(int16_t);
+		break;
+	case overdrive_value_u32:
+		handle_type(uint32_t);
+		break;
+	case overdrive_value_i32:
+		handle_type(int32_t);
+		break;
+	case overdrive_value_u64:
+		handle_type(uint64_t);
+		break;
+	case overdrive_value_i64:
+		handle_type(int64_t);
+		break;
+	}
+#undef handle_type
+	return 0;
+}

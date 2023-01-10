@@ -265,6 +265,29 @@ static const uint8_t smu_v13_0_0_throttler_map[] = {
 	[THROTTLER_FIT_BIT]		= (SMU_THROTTLER_FIT_BIT),
 };
 
+const struct overdrive_mapping overdrive_map[] = {
+	OD_MAP(SMU_13_0_0_ODSETTING_GFXCLKFMAX, SMU_13_0_0_ODFEATURE_GFXCLK_LIMITS, GfxclkFmax, i16),
+	OD_MAP(SMU_13_0_0_ODSETTING_GFXCLKFMIN, SMU_13_0_0_ODFEATURE_GFXCLK_LIMITS, GfxclkFmin, i16),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEFREQ_P1, SMU_13_0_ODFEATURE_GFXCLK_CURVE, ),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEVOLTAGE_P1, SMU_13_0_ODFEATURE_GFXCLK_CURVE),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEFREQ_P2, SMU_13_0_ODFEATURE_GFXCLK_CURVE),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEVOLTAGE_P2, SMU_13_0_ODFEATURE_GFXCLK_CURVE),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEFREQ_P3, SMU_13_0_ODFEATURE_GFXCLK_CURVE),
+	// OD_MAP(SMU_13_0_ODSETTING_VDDGFXCURVEVOLTAGE_P3, SMU_13_0_ODFEATURE_GFXCLK_CURVE),
+	OD_MAP(SMU_13_0_0_ODSETTING_UCLKFMAX, SMU_13_0_0_ODFEATURE_UCLK_LIMITS, UclkFmax, u16),
+	OD_MAP(SMU_13_0_0_ODSETTING_UCLKFMIN, SMU_13_0_0_ODFEATURE_UCLK_LIMITS, UclkFmin, u16),
+	// OD_MAP(SMU_13_0_ODSETTING_POWERPERCENTAGE),
+	// OD_MAP(SMU_13_0_ODSETTING_FANRPMMIN),
+	// OD_MAP(SMU_13_0_ODSETTING_FANRPMACOUSTICLIMIT),
+	// OD_MAP(SMU_13_0_ODSETTING_FANTARGETTEMPERATURE),
+	// OD_MAP(SMU_13_0_ODSETTING_OPERATINGTEMPMAX),
+	// OD_MAP(SMU_13_0_ODSETTING_ACTIMING),
+	OD_MAP(SMU_13_0_0_ODSETTING_FAN_ZERO_RPM_CONTROL, SMU_13_0_0_ODFEATURE_FAN_ZERO_RPM_CONTROL, FanZeroRpmEnable, u8),
+	// OD_MAP(SMU_13_0_ODSETTING_AUTOUVENGINE),
+	// OD_MAP(SMU_13_0_ODSETTING_AUTOOCENGINE),
+	// OD_MAP(SMU_13_0_ODSETTING_AUTOOCMEMORY),
+};
+
 static int
 smu_v13_0_0_get_allowed_feature_mask(struct smu_context *smu,
 				  uint32_t *feature_mask, uint32_t num)
@@ -1239,30 +1262,38 @@ static int smu_v13_0_0_print_clk_levels(struct smu_context *smu,
 					(lane_width == link_width[pcie_table->pcie_lane[i]]) ?
 					"*" : "");
 		break;
-	case SMU_OD_CCLK:
 	case SMU_OD_SCLK:
 	case SMU_OD_MCLK:
-		if (!smu->od_enabled || !od_table || !od_settings)
-			break;
-		od_mapping = &clk2od_mapping[clk_type];
-		if (!od_mapping->valid || !od_settings->cap[od_mapping->cap])
-			break;
-		size += sysfs_emit_at(buf, size, "%s:\n", od_mapping->name);
-		smu_v13_0_0_load_od_range(od_mapping, od_table, &od_range[0]);
-		size += sysfs_emit_at(buf, size, "0: %uMHz\n1: %uMHz\n", od_range[0], od_range[1]);
-		break;
-	case SMU_OD_RANGE:
-		if (!smu->od_enabled || !od_table || !od_settings)
-			break;
-		for (unsigned int i = 0; i < SMU_CLK_COUNT; i++) {
-			if (!clk2od_mapping[i].valid || !od_settings->cap[clk2od_mapping[i].cap])
-				continue;
-			// We only really care about min values for the min, and vice-versa
-			od_limit[0] = od_settings->min[clk2od_mapping[i].settings[0]];
-			od_limit[1] = od_settings->max[clk2od_mapping[i].settings[1]];
-			size += sysfs_emit_at(buf, size, "%s: %uMHz %uMHz\n", clk2od_mapping[i].name, od_limit[0], od_limit[1]);
+		uint64_t caps = 0;
+		for (i = 0; i < SMU_13_0_0_ODFEATURE_COUNT; i++) {
+			if (od_settings->cap[i])
+				caps |= (1 << i);
 		}
-		break;
+		return smu_cmn_print_od_settings(smu, 0, SMU_13_0_0_ODSETTING_COUNT, overdrive_map, od_table, caps, &od_settings->min[0], &od_settings->max[0], buf);
+	// case SMU_OD_CCLK:
+	// case SMU_OD_SCLK:
+	// case SMU_OD_MCLK:
+	// 	if (!smu->od_enabled || !od_table || !od_settings)
+	// 		break;
+	// 	od_mapping = &clk2od_mapping[clk_type];
+	// 	if (!od_mapping->valid || !od_settings->cap[od_mapping->cap])
+	// 		break;
+	// 	size += sysfs_emit_at(buf, size, "%s:\n", od_mapping->name);
+	// 	smu_v13_0_0_load_od_range(od_mapping, od_table, &od_range[0]);
+	// 	size += sysfs_emit_at(buf, size, "0: %uMHz\n1: %uMHz\n", od_range[0], od_range[1]);
+	// 	break;
+	// case SMU_OD_RANGE:
+	// 	if (!smu->od_enabled || !od_table || !od_settings)
+	// 		break;
+	// 	for (unsigned int i = 0; i < SMU_CLK_COUNT; i++) {
+	// 		if (!clk2od_mapping[i].valid || !od_settings->cap[clk2od_mapping[i].cap])
+	// 			continue;
+	// 		// We only really care about min values for the min, and vice-versa
+	// 		od_limit[0] = od_settings->min[clk2od_mapping[i].settings[0]];
+	// 		od_limit[1] = od_settings->max[clk2od_mapping[i].settings[1]];
+	// 		size += sysfs_emit_at(buf, size, "%s: %uMHz %uMHz\n", clk2od_mapping[i].name, od_limit[0], od_limit[1]);
+	// 	}
+	// 	break;
 	// case SMU_OD_VDDC_CURVE:
 	// case SMU_OD_VDDGFX_OFFSET:
 	default:
