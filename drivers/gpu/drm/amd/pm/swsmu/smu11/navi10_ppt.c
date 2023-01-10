@@ -2496,16 +2496,34 @@ static int navi10_baco_exit(struct smu_context *smu)
 	}
 }
 
+static int navi10_fill_od_table_voltages(struct smu_context *smu, OverDriveTable_t *od_table)
+{
+	int ret = 0;
+	if (!od_table->GfxclkVolt1) {
+		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
+								&od_table->GfxclkVolt1,
+								od_table->GfxclkFreq1);
+		if (ret)
+			return ret;
+	}
+	if (!od_table->GfxclkVolt2) {
+		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
+								&od_table->GfxclkVolt2,
+								od_table->GfxclkFreq2);
+		if (ret)
+			return ret;
+	}
+	if (!od_table->GfxclkVolt3) {
+		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
+								&od_table->GfxclkVolt3,
+								od_table->GfxclkFreq3);
+	}
+	return ret;
+}
+
 static int navi10_set_default_od_settings(struct smu_context *smu)
 {
-	OverDriveTable_t *od_table =
-		(OverDriveTable_t *)smu->smu_table.overdrive_table;
-	OverDriveTable_t *boot_od_table =
-		(OverDriveTable_t *)smu->smu_table.boot_overdrive_table;
-	OverDriveTable_t *user_od_table =
-		(OverDriveTable_t *)smu->smu_table.user_overdrive_table;
 	int ret = 0;
-
 	/*
 	 * For S3/S4/Runpm resume, no need to setup those overdrive tables again as
 	 *   - either they already have the default OD settings got during cold bootup
@@ -2514,42 +2532,18 @@ static int navi10_set_default_od_settings(struct smu_context *smu)
 	if (smu->adev->in_suspend)
 		return 0;
 
-	ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, (void *)boot_od_table, false);
+	ret = smu_cmn_set_default_od_settings(smu);
 	if (ret) {
-		dev_err(smu->adev->dev, "Failed to get overdrive table!\n");
 		return ret;
 	}
-
-	if (!boot_od_table->GfxclkVolt1) {
-		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
-								&boot_od_table->GfxclkVolt1,
-								boot_od_table->GfxclkFreq1);
-		if (ret)
-			return ret;
-	}
-
-	if (!boot_od_table->GfxclkVolt2) {
-		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
-								&boot_od_table->GfxclkVolt2,
-								boot_od_table->GfxclkFreq2);
-		if (ret)
-			return ret;
-	}
-
-	if (!boot_od_table->GfxclkVolt3) {
-		ret = navi10_overdrive_get_gfx_clk_base_voltage(smu,
-								&boot_od_table->GfxclkVolt3,
-								boot_od_table->GfxclkFreq3);
-		if (ret)
-			return ret;
-	}
-
-	navi10_dump_od_table(smu, boot_od_table);
-
-	memcpy(od_table, boot_od_table, sizeof(OverDriveTable_t));
-	memcpy(user_od_table, boot_od_table, sizeof(OverDriveTable_t));
-
-	return 0;
+	ret = navi10_fill_od_table_voltages(smu, smu->smu_table.boot_overdrive_table);
+	if (ret)
+		return ret;
+	navi10_dump_od_table(smu, smu->smu_table.boot_overdrive_table);
+	ret = navi10_fill_od_table_voltages(smu, smu->smu_table.overdrive_table);
+	if (ret)
+		return ret;
+	return navi10_fill_od_table_voltages(smu, smu->smu_table.user_overdrive_table);
 }
 
 static int navi10_od_edit_dpm_table(struct smu_context *smu, enum PP_OD_DPM_TABLE_COMMAND type, long input[], uint32_t size) {
