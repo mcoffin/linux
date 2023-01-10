@@ -388,6 +388,21 @@ static void smu_v13_0_0_dump_od_settings(struct amdgpu_device *adev, struct smu_
 	}
 }
 
+static void smu_v13_0_0_dump_od_table(struct amdgpu_device *adev, OverDriveTable_t *od_table)
+{
+	unsigned int i;
+	char *s;
+	dev_info(adev->dev, "GFXFLK: [%d, %d]\n", od_table->GfxclkFmin, od_table->GfxclkFmax);
+	dev_info(adev->dev, "UCLK: [%d, %d]\n", od_table->UclkFmin, od_table->UclkFmax);
+	for (i = 0; i < NUM_OD_FAN_MAX_POINTS; i++) {
+		dev_info(adev->dev, "FAN_CURVE[%u]: %u @ %u\n", i, od_table->FanLinearPwmPoints[i], od_table->FanLinearTempPoints[i]);
+	}
+	dev_info(adev->dev, "FAN_MIN_PWM: %u\n", od_table->FanMinimumPwm);
+	dev_info(adev->dev, "FAN_TARGET_TEMP: %u\n", od_table->FanTargetTemperature);
+	dev_info(adev->dev, "FAN_ZERO_RPM_ENABLE: %s\n", od_table->FanZeroRpmEnable ? "true" : "false");
+	dev_info(adev->dev, "FAN_MODE: %u\n", od_table->FanMode);
+}
+
 static int smu_v13_0_0_check_powerplay_table(struct smu_context *smu)
 {
 	struct smu_table_context *table_context = &smu->smu_table;
@@ -2221,6 +2236,7 @@ static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
 	default:
 		return -EOPNOTSUPP;
 	}
+	smu_v13_0_0_dump_od_table(smu->adev, od_table);
 	return 0;
 }
 
@@ -2263,6 +2279,15 @@ int smu_v13_0_0_set_od_setting(struct smu_context *smu, uint32_t setting, uint32
 {
 	struct smu_13_0_0_overdrive_table *od_settings = smu->od_settings;
 	OverDriveTable_t *od_table = smu->smu_table.overdrive_table;
+	int ret = 0;
+	if (setting == 6288 && value == 6288) {
+		dev_warn(smu->adev->dev, "refreshing overdrive table from smu\n");
+		ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, od_table, false);
+		if (ret) {
+			dev_err(smu->adev->dev, "refresh failed (%d)\n", ret);
+			return ret;
+		}
+	}
 	const struct setting2table_mapping *m = NULL;
 	if (!smu->od_enabled || !od_settings || !od_table)
 		return -EOPNOTSUPP;
@@ -2336,12 +2361,12 @@ static const struct pptable_funcs smu_v13_0_0_ppt_funcs = {
 	.set_performance_level = smu_v13_0_set_performance_level,
 	.gfx_off_control = smu_v13_0_gfx_off_control,
 	.get_unique_id = smu_v13_0_0_get_unique_id,
-	.get_fan_speed_pwm = smu_v13_0_0_get_fan_speed_pwm,
-	.get_fan_speed_rpm = smu_v13_0_0_get_fan_speed_rpm,
-	.set_fan_speed_pwm = smu_v13_0_set_fan_speed_pwm,
-	.set_fan_speed_rpm = smu_v13_0_set_fan_speed_rpm,
-	.get_fan_control_mode = smu_v13_0_get_fan_control_mode,
-	.set_fan_control_mode = smu_v13_0_set_fan_control_mode,
+	// .get_fan_speed_pwm = smu_v13_0_0_get_fan_speed_pwm,
+	// .get_fan_speed_rpm = smu_v13_0_0_get_fan_speed_rpm,
+	// .set_fan_speed_pwm = smu_v13_0_set_fan_speed_pwm,
+	// .set_fan_speed_rpm = smu_v13_0_set_fan_speed_rpm,
+	// .get_fan_control_mode = smu_v13_0_get_fan_control_mode,
+	// .set_fan_control_mode = smu_v13_0_set_fan_control_mode,
 	.enable_mgpu_fan_boost = smu_v13_0_0_enable_mgpu_fan_boost,
 	.get_power_limit = smu_v13_0_0_get_power_limit,
 	.set_power_limit = smu_v13_0_set_power_limit,
