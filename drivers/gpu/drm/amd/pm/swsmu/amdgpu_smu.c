@@ -90,6 +90,16 @@ static int smu_sys_set_pp_feature_mask(void *handle,
 	return smu_set_pp_feature_mask(smu, new_mask);
 }
 
+static int smu_set_od_setting(void *handle, uint32_t setting, uint32_t value)
+{
+	struct smu_context *smu = handle;
+	if (!smu->pm_enabled || !smu->adev->pm.dpm_enabled || !smu->od_enabled)
+		return -EOPNOTSUPP;
+	if (!smu->ppt_funcs->set_od_setting)
+		return -EOPNOTSUPP;
+	return smu->ppt_funcs->set_od_setting(smu, setting, value);
+}
+
 int smu_set_residency_gfxoff(struct smu_context *smu, bool value)
 {
 	if (!smu->ppt_funcs->set_gfx_off_residency)
@@ -3042,6 +3052,7 @@ static const struct amd_pm_funcs swsmu_pm_funcs = {
 	.get_uclk_dpm_states              = smu_get_uclk_dpm_states,
 	.get_dpm_clock_table              = smu_get_dpm_clock_table,
 	.get_smu_prv_buf_details = smu_get_prv_buffer_details,
+	.set_od_setting = smu_set_od_setting,
 };
 
 int smu_wait_for_event(struct smu_context *smu, enum smu_event_type event,

@@ -514,6 +514,22 @@ static int amdgpu_hw_ip_info(struct amdgpu_device *adev,
 	return 0;
 }
 
+int amdgpu_overdrive_ioctl(struct drm_device *dev, void *data, struct drm_file *filp)
+{
+	struct amdgpu_device *adev = drm_to_adev(dev);
+	struct drm_amdgpu_overdrive *info = data;
+
+	switch (info->operation) {
+	case AMDGPU_OVERDRIVE_SET:
+		return amdgpu_dpm_set_od_setting(adev, info->setting, info->value);
+	case AMDGPU_OVERDRIVE_COMMIT:
+		return -ENOSYS;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 /*
  * Userspace get information ioctl
  */
