@@ -125,7 +125,29 @@ static inline void smu_cmn_get_sysfs_buf(char **buf, int *offset)
 bool smu_cmn_is_audio_func_enabled(struct amdgpu_device *adev);
 
 int smu_cmn_set_default_od_settings(struct smu_context *smu);
+
 int smu_cmn_restore_user_od_settings(struct smu_context *smu);
+
+enum overdrive_value_type {
+	overdrive_value_u8 = 0,
+	overdrive_value_i8,
+	overdrive_value_u16,
+	overdrive_value_i16,
+	overdrive_value_u32,
+	overdrive_value_i32,
+	overdrive_value_u64,
+	overdrive_value_i64
+};
+
+struct overdrive_mapping {
+	uint8_t valid;
+	uint64_t requirements;
+	size_t offset;
+	enum overdrive_value_type type;
+	const char *label;
+};
+
+int smu_cmn_print_od_settings(struct smu_context *smu, unsigned int first_setting, size_t n_settings, const overdrive_mapping *mapping, void *od_table, uint8_t *capabilities, uint32_t *min_limits, uint32_t *max_limits, char *buf);
 
 #endif
 #endif
