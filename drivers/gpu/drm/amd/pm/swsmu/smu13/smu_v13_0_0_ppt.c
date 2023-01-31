@@ -265,6 +265,10 @@ static const uint8_t smu_v13_0_0_throttler_map[] = {
 	[THROTTLER_FIT_BIT]		= (SMU_THROTTLER_FIT_BIT),
 };
 
+static inline char* booltoa(bool v) {
+	return v ? "true" : "false";
+}
+
 static int
 smu_v13_0_0_get_allowed_feature_mask(struct smu_context *smu,
 				  uint32_t *feature_mask, uint32_t num)
@@ -315,9 +319,17 @@ smu_v13_0_0_get_allowed_feature_mask(struct smu_context *smu,
 	return 0;
 }
 
+
 static void smu_v13_0_0_dump_od_settings(struct amdgpu_device *adev, struct smu_13_0_0_overdrive_table* od_settings) {
+#define _clamp_max(fst, snd) ((snd > fst) ? snd : fst)
 	unsigned int i;
-	for (i = 0; i < SMU_13_0_0_ODCAP_COUNT; i++) {
+	dev_info(adev->dev, "%s:\n", "OD_SETTINGS");
+	dev_info(adev->dev, "revision: %u / 0x%02x\n", od_settings->revision, od_settings->revision);
+	dev_info(adev->dev,
+		"found: (features: %u/%u, settings: %u/%u)\n",
+		od_settings->feature_count, SMU_13_0_0_ODCAP_COUNT,
+		od_settings->setting_count, SMU_13_0_0_ODSETTING_COUNT);
+	for (i = 0; i < _clamp_max(SMU_13_0_0_ODCAP_COUNT, od_settings->feature_count); i++) {
 #define HANDLE_CAP(capability) case capability: \
 		dev_info(adev->dev, "%s[%u] %s\n", #capability, i, od_settings->cap[i] ? "true" : "false"); \
 		break;
@@ -339,12 +351,12 @@ static void smu_v13_0_0_dump_od_settings(struct amdgpu_device *adev, struct smu_
 		HANDLE_CAP(SMU_13_0_0_ODCAP_AUTO_FAN_ACOUSTIC_LIMIT);
 		HANDLE_CAP(SMU_13_0_0_ODCAP_POWER_MODE);
 		default:
-			dev_info(adev->dev, "%s[%u] %s - [%u,%u]\n", "ODCAP", i, od_settings->cap[i] ? "true" : "false", od_settings->min[i], od_settings->max[i]);
+			dev_info(adev->dev, "UNKNOWN_ODCAP[%u] %s - [%u,%u]\n", i, booltoa(od_settings->cap[i]), od_settings->min[i], od_settings->max[i]);
 			break;
 		}
 #undef HANDLE_CAP
 	}
-	for (i = 0; i < SMU_13_0_0_ODSETTING_COUNT; i++) {
+	for (i = 0; i < _clamp_max(SMU_13_0_0_ODSETTING_COUNT, od_settings->setting_count); i++) {
 #define HANDLE_SETTING(setting) case setting:\
 		dev_info(adev->dev, "%s[%u] - [%u,%u]\n", #setting, i, od_settings->min[i], od_settings->max[i]);\
 		break;
@@ -381,26 +393,59 @@ static void smu_v13_0_0_dump_od_settings(struct amdgpu_device *adev, struct smu_
 		HANDLE_SETTING(SMU_13_0_0_ODSETTING_POWER_MODE)
 		HANDLE_SETTING(SMU_13_0_0_ODSETTING_COUNT)
 		default:
-			dev_info(adev->dev, "%s[%u] - [%u,%u]\n", "ODSETTING", i, od_settings->min[i], od_settings->max[i]);
+			dev_info(adev->dev, "%s[%u] - [%u,%u]\n", "UNKNOWN_ODSETTING", i, od_settings->min[i], od_settings->max[i]);
 			break;
 		}
 #undef HANDLE_SETTING
+#undef _clamp_max
 	}
 }
 
-static void smu_v13_0_0_dump_od_table(struct amdgpu_device *adev, OverDriveTable_t *od_table)
+static inline char* fan_mode_map(uint8_t mode) {
+	switch (mode) {
+		case FAN_MODE_AUTO:
+			return "FAN_MODE_AUTO";
+		case FAN_MODE_MANUAL_LINEAR:
+			return "FAN_MODE_MANUAL_LINEAR";
+		default:
+			return NULL;
+	}
+}
+
+static void smu_v13_0_0_dump_od_table(struct amdgpu_device *adev, OverDriveTable_t *od_table, PPTable_t *pptable)
 {
 	unsigned int i;
-	char *s;
-	dev_info(adev->dev, "GFXFLK: [%d, %d]\n", od_table->GfxclkFmin, od_table->GfxclkFmax);
-	dev_info(adev->dev, "UCLK: [%d, %d]\n", od_table->UclkFmin, od_table->UclkFmax);
+	const char* const fan_mode_map[2] = {
+		[FAN_MODE_AUTO] = "FAN_MODE_AUTO",
+		[FAN_MODE_MANUAL_LINEAR] = "FAN_MODE_MANUAL_LINEAR"
+	};
+	dev_info(adev->dev, "OD_TABLE[%lu] @ %p:\n", sizeof(OverDriveTable_t), od_table);
+	dev_info(adev->dev, "Gfxclk: [%d, %d]\n", od_table->GfxclkFmin, od_table->GfxclkFmax);
+	dev_info(adev->dev, "Uclk: [%d, %d]\n", od_table->UclkFmin, od_table->UclkFmax);
 	for (i = 0; i < NUM_OD_FAN_MAX_POINTS; i++) {
 		dev_info(adev->dev, "FAN_CURVE[%u]: %u @ %u\n", i, od_table->FanLinearPwmPoints[i], od_table->FanLinearTempPoints[i]);
 	}
-	dev_info(adev->dev, "FAN_MIN_PWM: %u\n", od_table->FanMinimumPwm);
-	dev_info(adev->dev, "FAN_TARGET_TEMP: %u\n", od_table->FanTargetTemperature);
-	dev_info(adev->dev, "FAN_ZERO_RPM_ENABLE: %s\n", od_table->FanZeroRpmEnable ? "true" : "false");
-	dev_info(adev->dev, "FAN_MODE: %u\n", od_table->FanMode);
+#define DUMP_OD_SETTING_PPT(od_key, ppt_value) \
+	dev_info(adev->dev, "%s: OD = %u, PPTable = %u\n", #od_key, od_table->od_key, ppt_value);
+#define DUMP_OD_SETTING(key) \
+	dev_info(adev->dev, "%s: %u\n", #key, od_table->key);
+	dev_info(adev->dev, "%s: 0x%08x\n", "FeatureCtrlMask", od_table->FeatureCtrlMask);
+	dev_info(adev->dev, "PowerSavingFeatures: Idle = 0x%02x, Runtime = 0x%02x", od_table->IdlePwrSavingFeaturesCtrl, od_table->RuntimePwrSavingFeaturesCtrl);
+	DUMP_OD_SETTING(Ppt);
+	DUMP_OD_SETTING(Tdc);
+	DUMP_OD_SETTING_PPT(FanMinimumPwm, pptable->SkuTable.FanPwmMin);
+	dev_info(adev->dev, "FanTargetTemperature: %u\n", od_table->FanTargetTemperature);
+	dev_info(adev->dev, "FanZeroRpmEnable: OD = %s, PPTable = %s\n", booltoa(od_table->FanZeroRpmEnable), booltoa(pptable->SkuTable.FanZeroRpmEnable));
+	dev_info(adev->dev, "FanZeroRpmStopTemp: %u\n", od_table->FanZeroRpmStopTemp);
+	if (od_table->FanMode < 2) {
+		dev_info(adev->dev, "FanMode: %s\n", fan_mode_map[od_table->FanMode]);
+	} else {
+		dev_info(adev->dev, "FanMode: %s[%u]\n", "FAN_MODE_UNKNOWN", od_table->FanMode);
+	}
+	DUMP_OD_SETTING(MaxOpTemp);
+	DUMP_OD_SETTING(VddGfxVmax);
+#undef DUMP_OD_SETTING
+#undef DUMP_OD_SETTING
 }
 
 static int smu_v13_0_0_check_powerplay_table(struct smu_context *smu)
@@ -768,8 +813,8 @@ static void smu_v13_0_0_dump_pptable(struct smu_context *smu)
        PPTable_t *pptable = table_context->driver_pptable;
        SkuTable_t *skutable = &pptable->SkuTable;
 
-       dev_info(smu->adev->dev, "Dumped PPTable:\n");
-
+       dev_info(smu->adev->dev, "Dumped PPTable[%lu] @ %p:\n", sizeof(PPTable_t), pptable);
+       dev_info(smu->adev->dev, "SkuTable[%lu] @ %p\n", sizeof(SkuTable_t), skutable);
        dev_info(smu->adev->dev, "Version = 0x%08x\n", skutable->Version);
        dev_info(smu->adev->dev, "FeaturesToRun[0] = 0x%08x\n", skutable->FeaturesToRun[0]);
        dev_info(smu->adev->dev, "FeaturesToRun[1] = 0x%08x\n", skutable->FeaturesToRun[1]);
@@ -1110,19 +1155,20 @@ static void smu_v13_0_0_load_od_range(const struct smu_13_0_0_od_range_mapping* 
 	}
 }
 
+#define OD_OFFSET(key) offsetof(OverDriveTable_t, key)
 static const struct smu_13_0_0_od_range_mapping clk2od_mapping[SMU_CLK_COUNT] = {
 	[SMU_OD_SCLK] =
 		{
 			1, SMU_13_0_0_ODCAP_GFXCLK_LIMITS,
 			{SMU_13_0_0_ODSETTING_GFXCLKFMIN, SMU_13_0_0_ODSETTING_GFXCLKFMAX},
-			{offsetof(OverDriveTable_t, GfxclkFmin), offsetof(OverDriveTable_t, GfxclkFmax)},
+			{OD_OFFSET(GfxclkFmin), OD_OFFSET(GfxclkFmax)},
 			"OD_SCLK"
 		},
 	[SMU_OD_MCLK] =
 		{
 			1, SMU_13_0_0_ODCAP_UCLK_LIMITS,
 			{SMU_13_0_0_ODSETTING_UCLKFMIN, SMU_13_0_0_ODSETTING_UCLKFMAX},
-			{offsetof(OverDriveTable_t, UclkFmin), offsetof(OverDriveTable_t, UclkFmax)},
+			{OD_OFFSET(UclkFmin), OD_OFFSET(UclkFmax)},
 			"OD_MCLK"
 		},
 };
@@ -1272,6 +1318,7 @@ static int smu_v13_0_0_print_clk_levels(struct smu_context *smu,
 	case SMU_OD_RANGE:
 		if (!smu->od_enabled || !od_table || !od_settings)
 			break;
+		size += sysfs_emit_at(buf, size, "OD_FEATURE_MASK: 0x%08x\n", od_table->FeatureCtrlMask);
 		for (unsigned int i = 0; i < SMU_CLK_COUNT; i++) {
 			if (!clk2od_mapping[i].valid || !od_settings->cap[clk2od_mapping[i].cap])
 				continue;
@@ -2215,6 +2262,7 @@ static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
 			if (ret)
 				return ret;
 			*freq_ptr = (uint16_t)input[i + 1];
+			od_table->FeatureCtrlMask |= SMU_13_0_0_ODFEATURE_GFXCLK_LIMITS;
 		}
 		break;
 	case PP_OD_RESTORE_DEFAULT_TABLE:
@@ -2236,7 +2284,7 @@ static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
 	default:
 		return -EOPNOTSUPP;
 	}
-	smu_v13_0_0_dump_od_table(smu->adev, od_table);
+	smu_v13_0_0_dump_od_table(smu->adev, od_table, table_context->driver_pptable);
 	return 0;
 }
 
@@ -2280,13 +2328,19 @@ int smu_v13_0_0_set_od_setting(struct smu_context *smu, uint32_t setting, uint32
 	struct smu_13_0_0_overdrive_table *od_settings = smu->od_settings;
 	OverDriveTable_t *od_table = smu->smu_table.overdrive_table;
 	int ret = 0;
-	if (setting == 6288 && value == 6288) {
+	switch (setting) {
+	case 6288:
 		dev_warn(smu->adev->dev, "refreshing overdrive table from smu\n");
 		ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, od_table, false);
 		if (ret) {
 			dev_err(smu->adev->dev, "refresh failed (%d)\n", ret);
-			return ret;
 		}
+		return ret;
+	case 6289:
+		od_table->FeatureCtrlMask = value;
+		return 0;
+	default:
+		break;
 	}
 	const struct setting2table_mapping *m = NULL;
 	if (!smu->od_enabled || !od_settings || !od_table)
@@ -2298,8 +2352,11 @@ int smu_v13_0_0_set_od_setting(struct smu_context *smu, uint32_t setting, uint32
 		return -EOPNOTSUPP;
 	if (value < od_settings->min[setting] || value > od_settings->max[setting])
 		return -EINVAL;
-	if (!setting_to_cap[setting].valid || !od_settings->cap[setting_to_cap[setting].value])
+	if (!setting_to_cap[setting].valid || !od_settings->cap[setting_to_cap[setting].value]) {
 		return -EOPNOTSUPP;
+	} else {
+		od_table->FeatureCtrlMask |= 1 << setting_to_cap[setting].value;
+	}
 	switch (m->ty) {
 	case SMU_13_0_0_ODSETTING_TYPE_I16:
 		int16_t* ip = (int16_t*)((void*)od_table + m->offset);
