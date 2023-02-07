@@ -90,14 +90,14 @@ static int smu_sys_set_pp_feature_mask(void *handle,
 	return smu_set_pp_feature_mask(smu, new_mask);
 }
 
-static int smu_set_od_setting(void *handle, uint32_t setting, uint32_t value)
+static int smu_set_od_setting(void *handle, uint32_t setting, uint32_t index, uint32_t value)
 {
 	struct smu_context *smu = handle;
 	if (!smu->pm_enabled || !smu->adev->pm.dpm_enabled || !smu->od_enabled)
 		return -EOPNOTSUPP;
 	if (!smu->ppt_funcs->set_od_setting)
 		return -EOPNOTSUPP;
-	return smu->ppt_funcs->set_od_setting(smu, setting, value);
+	return smu->ppt_funcs->set_od_setting(smu, setting, index, value);
 }
 
 int smu_set_residency_gfxoff(struct smu_context *smu, bool value)

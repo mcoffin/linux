@@ -1198,12 +1198,14 @@ struct drm_amdgpu_info_video_caps {
 struct drm_amdgpu_overdrive {
 	__u32 operation;
 	__u32 setting;
+	__u32 index;
 	__u32 value;
 	__u32 pad;
 };
 
 #define AMDGPU_OVERDRIVE_SET (1)
 #define AMDGPU_OVERDRIVE_COMMIT (2)
+#define AMDGPU_OVERDRIVE_REFRESH (3)
 
 #if defined(__cplusplus)
 }

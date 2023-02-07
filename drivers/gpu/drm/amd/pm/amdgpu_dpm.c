@@ -1748,7 +1748,7 @@ int amdgpu_dpm_get_dpm_clock_table(struct amdgpu_device *adev,
 	return ret;
 }
 
-int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint32_t value)
+int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint32_t index, uint32_t value)
 {
 	const struct amd_pm_funcs *pp_funcs = adev->powerplay.pp_funcs;
 	int ret = 0;
@@ -1757,7 +1757,7 @@ int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint
 		return -EOPNOTSUPP;
 
 	mutex_lock(&adev->pm.mutex);
-	ret = pp_funcs->set_od_setting(adev->powerplay.pp_handle, setting, value);
+	ret = pp_funcs->set_od_setting(adev->powerplay.pp_handle, setting, index, value);
 	mutex_unlock(&adev->pm.mutex);
 	return ret;
 }

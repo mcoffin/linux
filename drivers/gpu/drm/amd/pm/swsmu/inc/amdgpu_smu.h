@@ -1340,7 +1340,7 @@ struct pptable_funcs {
 	 * @init_pptable_microcode: Prepare the pptable microcode to upload via PSP
 	 */
 	int (*init_pptable_microcode)(struct smu_context *smu);
-	int (*set_od_setting)(struct smu_context *smu, uint32_t setting, uint32_t value);
+	int (*set_od_setting)(struct smu_context *smu, uint32_t setting, uint32_t index, uint32_t value);
 };
 
 typedef enum {

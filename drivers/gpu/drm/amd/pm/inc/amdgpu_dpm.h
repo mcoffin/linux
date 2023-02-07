@@ -555,7 +555,7 @@ enum pp_smu_status amdgpu_dpm_get_uclk_dpm_states(struct amdgpu_device *adev,
 						  unsigned int *num_states);
 int amdgpu_dpm_get_dpm_clock_table(struct amdgpu_device *adev,
 				   struct dpm_clocks *clock_table);
-int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint32_t value);
+int amdgpu_dpm_set_od_setting(struct amdgpu_device *adev, uint32_t setting, uint32_t index, uint32_t value);
 
 int amdgpu_dpm_commit_overdrive_table(struct amdgpu_device *adev);
 
