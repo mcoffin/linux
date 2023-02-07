@@ -524,7 +524,7 @@ int amdgpu_overdrive_ioctl(struct drm_device *dev, void *data, struct drm_file *
 
 	switch (info->operation) {
 	case AMDGPU_OVERDRIVE_SET:
-		return amdgpu_dpm_set_od_setting(adev, info->setting, info->value);
+		return amdgpu_dpm_set_od_setting(adev, info->setting, info->index, info->value);
 	case AMDGPU_OVERDRIVE_COMMIT:
 		return amdgpu_dpm_commit_overdrive_table(adev);
 	default:
