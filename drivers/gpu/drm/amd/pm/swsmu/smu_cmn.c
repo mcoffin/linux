@@ -1114,3 +1114,97 @@ int smu_cmn_restore_user_od_settings(struct smu_context *smu) {
 
 	return ret;
 }
+
+int smu_cmn_set_od_setting(
+	struct smu_context *smu,
+	uint32_t setting,
+	uint32_t index,
+	uint32_t value,
+	uint32_t supported_features,
+	void *od_table,
+	uint32_t *od_features,
+	size_t metadata_count,
+	const struct smu_cmn_od_setting_metadata metadata[],
+	void *min_value,
+	void *max_value
+) {
+	int ret = 0;
+	const struct smu_cmn_od_setting_metadata *data;
+	// If overdrive is not enabled, just return
+	if (!smu->od_enabled || !od_table)
+		return -EINVAL;
+
+	// TODO: remove before upstream
+	switch (setting) {
+	case 0xffffffff:
+		dev_info(smu->adev->dev, "refreshing overdrive table from smu\n");
+		ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, od_table, false);
+		if (ret) {
+			dev_err(smu->adev->dev, "refresh failed! (%d)\n", ret);
+		}
+		return ret;
+	case 0xfffffffe:
+		if (!od_features)
+			return -EINVAL;
+		*od_features = value;
+		return 0;
+	default:
+		break;
+	}
+
+	// Sanity/Validity checks
+	if (setting > metadata_count)
+		return -EINVAL;
+	data = &metadata[setting];
+	if (!data->valid || (data->feature_mask & (~supported_features)))
+		return -EOPNOTSUPP;
+	if (index >= data->count)
+		return -EINVAL;
+
+	// Handle each setting validly for it's data type based on data->type
+	// TODO: does casting to (setting_t) actually work for value?
+#define HANDLE_SETTING(setting_t, format_string, suffix) \
+	setting_t new_value_##suffix = (setting_t)value; \
+	setting_t *od_value_##suffix = (setting_t*)((void*)od_table + data->offset); \
+	od_value_##suffix = &od_value_##suffix[index]; \
+	if ((min_value && new_value_##suffix < *((setting_t*)min_value)) || (max_value && new_value_##suffix > *((setting_t*)max_value))) { \
+		if (min_value && max_value) { \
+			dev_warn(smu->adev->dev, "od_setting[%u][%u] value " format_string "is not in range [" format_string ", " format_string "]\n", setting, index, new_value_##suffix, *((setting_t*)min_value), *((setting_t*)max_value)); \
+		} else { \
+			dev_warn(smu->adev->dev, "od_setting[%u][%u] value " format_string " is out of range!\n", setting, index, new_value_##suffix); \
+		} \
+		return -EINVAL; \
+	} \
+	dev_dbg(smu->adev->dev, "setting od_setting[%u][%u] " format_string " -> " format_string "\n", setting, index, *od_value_##suffix, new_value_##suffix); \
+	*od_value_##suffix = new_value_##suffix;
+	switch (data->type) {
+	case od_settings_type_uint8_t:
+		HANDLE_SETTING(uint8_t, "%u", u8);
+		break;
+	case od_settings_type_int8_t:
+		HANDLE_SETTING(int8_t, "%d", i8);
+		break;
+	case od_settings_type_uint16_t:
+		HANDLE_SETTING(uint16_t, "%u", u16);
+		break;
+	case od_settings_type_int16_t:
+		HANDLE_SETTING(int16_t, "%d", i16);
+		break;
+	case od_settings_type_uint32_t:
+		HANDLE_SETTING(uint32_t, "%u", u32);
+		break;
+	case od_settings_type_int32_t:
+		HANDLE_SETTING(int32_t, "%d", i32);
+		break;
+	default:
+		dev_err(smu->adev->dev, "invalid type for od_setting %s[%u]: %u\n", data->name, index, data->type);
+		return -EINVAL;
+	}
+#undef HANDLE_SETTING
+	// If we get to this point w/o returning, then we succeeded in setting a valid value for the setting
+	// so update the od table's feature mask IF not null
+	if (od_features)
+		*od_features |= data->feature_mask;
+
+	return 0;
+}

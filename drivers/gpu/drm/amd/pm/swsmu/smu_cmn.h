@@ -127,5 +127,38 @@ bool smu_cmn_is_audio_func_enabled(struct amdgpu_device *adev);
 int smu_cmn_set_default_od_settings(struct smu_context *smu);
 int smu_cmn_restore_user_od_settings(struct smu_context *smu);
 
+typedef enum {
+	od_settings_type_uint8_t = 0,
+	od_settings_type_int8_t,
+	od_settings_type_uint16_t,
+	od_settings_type_int16_t,
+	od_settings_type_uint32_t,
+	od_settings_type_int32_t,
+	od_settings_type_count
+} od_settings_type_t;
+
+struct smu_cmn_od_setting_metadata {
+	uint8_t valid;
+	od_settings_type_t type;
+	uint32_t feature_mask;
+	size_t offset;
+	size_t count;
+	char *name;
+};
+
+int smu_cmn_set_od_setting(
+	struct smu_context *smu,
+	uint32_t setting,
+	uint32_t index,
+	uint32_t value,
+	uint32_t supported_features,
+	void *od_table,
+	uint32_t *od_features,
+	size_t metadata_count,
+	const struct smu_cmn_od_setting_metadata metadata[],
+	void *min_value,
+	void *max_value
+);
+
 #endif
 #endif

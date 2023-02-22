@@ -2081,125 +2081,83 @@ static int smu_v13_0_0_send_bad_mem_channel_flag(struct smu_context *smu,
 	return ret;
 }
 
-typedef enum {
-	od_settings_type_uint8_t = 0,
-	od_settings_type_int8_t,
-	od_settings_type_uint16_t,
-	od_settings_type_int16_t,
-	od_settings_type_uint32_t,
-	od_settings_type_int32_t,
-	od_settings_type_count
-} od_settings_type_t;
-
-struct od_setting_mapping {
-	uint8_t valid;
-	uint32_t feature_mask;
-	size_t offset;
-	size_t limits_offset;
-	od_settings_type_t type;
-	size_t count;
-	char* name;
+#define OD_SETTING_COUNT (20)
+#define OD_SETTING_MAP_ARR(setting, mask, field, ty, count) \
+	[setting]={1, od_settings_type_##ty, mask, offsetof(OverDriveTable_t, field), count, #field}
+#define OD_SETTING_MAP(setting, mask, field, ty) OD_SETTING_MAP_ARR(setting, mask, field, ty, 1)
+static const struct smu_cmn_od_setting_metadata od_settings_map[OD_SETTING_COUNT] = {
+	OD_SETTING_MAP_ARR(0, 0x1 << PP_OD_FEATURE_GFX_VF_CURVE_BIT, VoltageOffsetPerZoneBoundary, int16_t, PP_NUM_OD_VF_CURVE_POINTS),
+	OD_SETTING_MAP(1, 0x1 << PP_OD_FEATURE_VMAX_BIT, VddGfxVmax, uint16_t),
+	OD_SETTING_MAP(2, 0x1 << PP_OD_FEATURE_POWER_FEATURE_CTRL_BIT, IdlePwrSavingFeaturesCtrl, uint8_t),
+	OD_SETTING_MAP(3, 0x1 << PP_OD_FEATURE_POWER_FEATURE_CTRL_BIT, RuntimePwrSavingFeaturesCtrl, uint8_t),
+	OD_SETTING_MAP(4, 0x1 << PP_OD_FEATURE_GFXCLK_BIT, GfxclkFmin, int16_t),
+	OD_SETTING_MAP(5, 0x1 << PP_OD_FEATURE_GFXCLK_BIT, GfxclkFmax, int16_t),
+	OD_SETTING_MAP(6, 0x1 << PP_OD_FEATURE_UCLK_BIT, UclkFmin, uint16_t),
+	OD_SETTING_MAP(7, 0x1 << PP_OD_FEATURE_UCLK_BIT, UclkFmax, uint16_t),
+	OD_SETTING_MAP(8, 0x1 << PP_OD_FEATURE_PPT_BIT, Ppt, int16_t),
+	OD_SETTING_MAP(9, 0x1 << PP_OD_FEATURE_TDC_BIT, Tdc, int16_t),
+	OD_SETTING_MAP_ARR(10, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanLinearPwmPoints, uint8_t, NUM_OD_FAN_MAX_POINTS),
+	OD_SETTING_MAP_ARR(11, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanLinearTempPoints, uint8_t, NUM_OD_FAN_MAX_POINTS),
+	OD_SETTING_MAP(12, 0xffffffff, FanMinimumPwm, uint16_t),
+	OD_SETTING_MAP(13, 0xffffffff, AcousticTargetRpmThreshold, uint16_t),
+	OD_SETTING_MAP(14, 0xffffffff, AcousticLimitRpmThreshold, uint16_t),
+	OD_SETTING_MAP(15, 0xffffffff, FanTargetTemperature, uint16_t),
+	OD_SETTING_MAP(16, 0x1 << PP_OD_FEATURE_ZERO_FAN_BIT, FanZeroRpmEnable, uint8_t),
+	OD_SETTING_MAP(17, 0x1 << PP_OD_FEATURE_ZERO_FAN_BIT, FanZeroRpmStopTemp, uint8_t),
+	OD_SETTING_MAP(18, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanMode, uint8_t),
+	OD_SETTING_MAP(19, 0xffffffff, MaxOpTemp, uint8_t)
 };
-
-#define OD_SETTING_MAX (19)
-#define SETTING_MAP_ARR(setting, mask, field, ty, count) \
-	[setting]={1, mask, offsetof(OverDriveTable_t, field), offsetof(OverDriveLimits_t, field), od_settings_type_##ty, count, #field}
-#define SETTING_MAP(setting, mask, field, ty) SETTING_MAP_ARR(setting, mask, field, ty, 1)
-static const struct od_setting_mapping od_settings_map[20] = {
-	SETTING_MAP_ARR(0, 0x1 << PP_OD_FEATURE_GFX_VF_CURVE_BIT, VoltageOffsetPerZoneBoundary, int16_t, PP_NUM_OD_VF_CURVE_POINTS),
-	SETTING_MAP(1, 0x1 << PP_OD_FEATURE_VMAX_BIT, VddGfxVmax, uint16_t),
-	SETTING_MAP(2, 0x1 << PP_OD_FEATURE_POWER_FEATURE_CTRL_BIT, IdlePwrSavingFeaturesCtrl, uint8_t),
-	SETTING_MAP(3, 0x1 << PP_OD_FEATURE_POWER_FEATURE_CTRL_BIT, RuntimePwrSavingFeaturesCtrl, uint8_t),
-	SETTING_MAP(4, 0x1 << PP_OD_FEATURE_GFXCLK_BIT, GfxclkFmin, int16_t),
-	SETTING_MAP(5, 0x1 << PP_OD_FEATURE_GFXCLK_BIT, GfxclkFmax, int16_t),
-	SETTING_MAP(6, 0x1 << PP_OD_FEATURE_UCLK_BIT, UclkFmin, uint16_t),
-	SETTING_MAP(7, 0x1 << PP_OD_FEATURE_UCLK_BIT, UclkFmax, uint16_t),
-	SETTING_MAP(8, 0x1 << PP_OD_FEATURE_PPT_BIT, Ppt, int16_t),
-	SETTING_MAP(9, 0x1 << PP_OD_FEATURE_TDC_BIT, Tdc, int16_t),
-	SETTING_MAP_ARR(10, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanLinearPwmPoints, uint8_t, NUM_OD_FAN_MAX_POINTS),
-	SETTING_MAP_ARR(11, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanLinearTempPoints, uint8_t, NUM_OD_FAN_MAX_POINTS),
-	SETTING_MAP(12, 0xffffffff, FanMinimumPwm, uint16_t),
-	SETTING_MAP(13, 0xffffffff, AcousticTargetRpmThreshold, uint16_t),
-	SETTING_MAP(14, 0xffffffff, AcousticLimitRpmThreshold, uint16_t),
-	SETTING_MAP(15, 0xffffffff, FanTargetTemperature, uint16_t),
-	SETTING_MAP(16, 0x1 << PP_OD_FEATURE_ZERO_FAN_BIT, FanZeroRpmEnable, uint8_t),
-	SETTING_MAP(17, 0x1 << PP_OD_FEATURE_ZERO_FAN_BIT, FanZeroRpmStopTemp, uint8_t),
-	SETTING_MAP(18, 0x1 << PP_OD_FEATURE_FAN_CURVE_BIT, FanMode, uint8_t),
-	SETTING_MAP(19, 0xffffffff, MaxOpTemp, uint8_t)
+#define OD_LIMIT_MAP(setting, field) \
+	[setting]=offsetof(OverDriveLimits_t, field)
+static const size_t od_limits_offsets[OD_SETTING_COUNT] = {
+	OD_LIMIT_MAP(0, VoltageOffsetPerZoneBoundary),
+	OD_LIMIT_MAP(1, VddGfxVmax),
+	OD_LIMIT_MAP(2, IdlePwrSavingFeaturesCtrl),
+	OD_LIMIT_MAP(3, RuntimePwrSavingFeaturesCtrl),
+	OD_LIMIT_MAP(4, GfxclkFmin),
+	OD_LIMIT_MAP(5, GfxclkFmax),
+	OD_LIMIT_MAP(6, UclkFmin),
+	OD_LIMIT_MAP(7, UclkFmax),
+	OD_LIMIT_MAP(8, Ppt),
+	OD_LIMIT_MAP(9, Tdc),
+	OD_LIMIT_MAP(10, FanLinearPwmPoints),
+	OD_LIMIT_MAP(11, FanLinearTempPoints),
+	OD_LIMIT_MAP(12, FanMinimumPwm),
+	OD_LIMIT_MAP(13, AcousticTargetRpmThreshold),
+	OD_LIMIT_MAP(14, AcousticLimitRpmThreshold),
+	OD_LIMIT_MAP(15, FanTargetTemperature),
+	OD_LIMIT_MAP(16, FanZeroRpmEnable),
+	OD_LIMIT_MAP(17, FanZeroRpmStopTemp),
+	OD_LIMIT_MAP(18, FanMode),
+	OD_LIMIT_MAP(19, MaxOpTemp)
 };
-#undef SETTING_MAP
-#undef SETTING_MAP_ARR
+#undef OD_SETTING_MAP
+#undef OD_SETTING_MAP_ARR
+#undef OD_LIMIT_MAP
 
 int smu_v13_0_0_set_od_setting(struct smu_context *smu, uint32_t setting, uint32_t index, uint32_t value)
 {
 	int ret = 0;
+	void *min_value = NULL, *max_value = NULL;
 	PPTable_t* pptable = smu->smu_table.driver_pptable;
 	OverDriveLimits_t* min = &pptable->SkuTable.OverDriveLimitsMin;
 	OverDriveLimits_t* max = &pptable->SkuTable.OverDriveLimitsBasicMax;
 	OverDriveTable_t* od_table = smu->smu_table.overdrive_table;
-	if (!smu->od_enabled || !od_table)
-		return -EINVAL;
-	switch (setting) {
-	case 0xffffffff:
-		dev_info(smu->adev->dev, "refreshing overdrive table from smu\n");
-		ret = smu_cmn_update_table(smu, SMU_TABLE_OVERDRIVE, 0, od_table, false);
-		if (ret) {
-			dev_err(smu->adev->dev, "refresh failed! (%d)\n", ret);
-		}
-		return ret;
-	case 0xfffffffe:
-		dev_warn(smu->adev->dev, "manually setting OD feature mask: 0x%08x -> 0x%08x\n", od_table->FeatureCtrlMask, value);
-		od_table->FeatureCtrlMask = value;
-		return 0;
-	default:
-		break;
+	uint32_t supported_features = min->FeatureCtrlMask | max->FeatureCtrlMask;
+
+	// get min/max pointers based on limit metadata
+	// This metadata is kept separately since limit metadata storage is done differently on different SMU versions
+	if (setting < OD_SETTING_COUNT) {
+		min_value = ((void*)min + od_limits_offsets[setting]);
+		max_value = ((void*)max + od_limits_offsets[setting]);
 	}
-	if (setting > OD_SETTING_MAX)
-		return -EINVAL;
-	uint32_t limits_feature_mask = min->FeatureCtrlMask | max->FeatureCtrlMask;
-	struct od_setting_mapping* mapping = &od_settings_map[setting];
-	if (!mapping->valid || (mapping->feature_mask & (~limits_feature_mask)))
-		return -EOPNOTSUPP;
-	if (index >= mapping->count)
-		return -EINVAL;
-	void* min_value = ((void*)min + mapping->limits_offset);
-	void* max_value = ((void*)max + mapping->limits_offset);
-#define HANDLE_SETTING(setting_t, format_string, suffix) \
-	setting_t new_value_##suffix = (setting_t)value; \
-	setting_t* od_value_##suffix = (setting_t*)((void*)od_table + mapping->offset + (index * sizeof(setting_t))); \
-	if (new_value_##suffix < *((setting_t*)min_value) || new_value_##suffix > *((setting_t*)max_value)) { \
-		dev_warn(smu->adev->dev, "od_setting[%u][%u] value " format_string " is not in range [" format_string ", " format_string "]\n", setting, index, new_value_##suffix, *((setting_t*)min_value), *((setting_t*)max_value)); \
-		return -EINVAL; \
-	} \
-	dev_dbg(smu->adev->dev, "setting od_setting[%u][%u] at %p (base: %p) " format_string " -> " format_string "\n", setting, index, od_value_##suffix, od_table, *od_value_##suffix, new_value_##suffix); \
-	*od_value_##suffix = new_value_##suffix; \
-	od_table->FeatureCtrlMask |= mapping->feature_mask;
-	switch (mapping->type) {
-	case od_settings_type_uint8_t:
-		HANDLE_SETTING(uint8_t, "%u", u8);
-		break;
-	case od_settings_type_int8_t:
-		HANDLE_SETTING(int8_t, "%d", i8);
-		break;
-	case od_settings_type_uint16_t:
-		HANDLE_SETTING(uint16_t, "%u", u16);
-		break;
-	case od_settings_type_int16_t:
-		HANDLE_SETTING(int16_t, "%d", i16);
-		break;
-	case od_settings_type_uint32_t:
-		HANDLE_SETTING(uint32_t, "%u", u32);
-		break;
-	case od_settings_type_int32_t:
-		HANDLE_SETTING(int32_t, "%d", i32);
-		break;
-	default:
-		dev_err(smu->adev->dev, "invalid type for od_setting %s[%u]: %u\n", mapping->name, index, mapping->type);
-		return -EINVAL;
+
+	// Use the common handler to handle all settings
+	ret = smu_cmn_set_od_setting(smu, setting, index, value, supported_features, (void*)od_table, &od_table->FeatureCtrlMask, OD_SETTING_COUNT, od_settings_map, min_value, max_value);
+	if (!ret) {
+		smu_v13_0_0_dump_od_table(smu->adev, od_table, smu->smu_table.driver_pptable);
 	}
-#undef HANDLE_SETTING
-	// smu_v13_0_0_dump_od_table(smu->adev, od_table, smu->smu_table.driver_pptable);
-	return 0;
+	return ret;
 }
 
 static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
@@ -2263,16 +2221,15 @@ static int smu_v13_0_0_od_edit_dpm_table(struct smu_context *smu,
 
 void smu_v13_0_0_dump_od_settings2(struct amdgpu_device *adev, OverDriveLimits_t *min, OverDriveLimits_t *max) {
 	unsigned int i;
+	struct smu_cmn_od_setting_metadata* m = NULL;
+	void *min_value = NULL, *max_value = NULL;
 	uint32_t limits_mask = min->FeatureCtrlMask | max->FeatureCtrlMask;
-	struct od_setting_mapping* m = NULL;
-	void* min_value = NULL;
-	void* max_value = NULL;
 	dev_info(adev->dev, "OverDriveLimits:\n");
-	for (i = 0; i <= OD_SETTING_MAX; i++) {
+	for (i = 0; i < OD_SETTING_COUNT; i++) {
 		m = &od_settings_map[i];
+		min_value = (void*)min + od_limits_offsets[i];
+		max_value = (void*)max + od_limits_offsets[i];
 #define HAS_FEATURE(mapping) ((mapping->feature_mask & (~limits_mask)) == 0)
-		min_value = (void*)min + m->limits_offset;
-		max_value = (void*)max + m->limits_offset;
 #define HANDLE_SETTING(ty, format_string) \
 		dev_info(adev->dev, "\t[%u][%s] %s: [" format_string ", " format_string "]\n", i, m->feature_mask == 0xffffffff ? "unknown" : booltoa(HAS_FEATURE(m)), m->name, *(ty *)min_value, *(ty *)max_value);
 		switch (m->type) {
