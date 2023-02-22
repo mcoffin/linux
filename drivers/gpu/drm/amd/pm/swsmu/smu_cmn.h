@@ -160,5 +160,17 @@ int smu_cmn_set_od_setting(
 	void *max_value
 );
 
+int smu_cmn_print_od_settings(
+	struct smu_context *smu,
+	uint32_t supported_features,
+	void *od_table,
+	uint32_t *od_features,
+	size_t metadata_count,
+	const struct smu_cmn_od_setting_metadata metadata[],
+	char *buf,
+	int *size,
+	bool include_idx
+);
+
 #endif
 #endif

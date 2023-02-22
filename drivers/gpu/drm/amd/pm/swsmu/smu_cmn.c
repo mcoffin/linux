@@ -1208,3 +1208,66 @@ int smu_cmn_set_od_setting(
 
 	return 0;
 }
+int smu_cmn_print_od_settings(
+	struct smu_context *smu,
+	uint32_t supported_features,
+	void *od_table,
+	uint32_t *od_features,
+	size_t metadata_count,
+	const struct smu_cmn_od_setting_metadata metadata[],
+	char *buf,
+	int *size,
+	bool include_idx
+) {
+	const struct smu_cmn_od_setting_metadata *setting;
+	size_t i, idx;
+	int ret = 0;
+	bool supported;
+	uint32_t enabled_features = od_features ? *od_features : 0x0;
+	if (!smu->od_enabled || !od_table)
+		return -EINVAL;
+	// smu_cmn_get_sysfs_buf(&buf, &size);
+#define handle_setting_all(setting, index, format_string, setting_t) \
+	case od_settings_type_##setting_t: \
+		if (include_idx) { \
+			*size += sysfs_emit_at( \
+				buf, *size, "[%lu]%s[%lu] (%s, %s): " format_string "\n", \
+				idx, setting->name, index, \
+				supported ? "supported" : "unsupported", \
+				(setting->feature_mask & (~enabled_features)) ? "disabled" : "enabled", \
+				((setting_t*)(od_table + setting->offset))[index] \
+			); \
+		} else { \
+			*size += sysfs_emit_at( \
+				buf, *size, "%s[%lu] (%s, %s): " format_string "\n", \
+				setting->name, index, \
+				supported ? "supported" : "unsupported", \
+				(setting->feature_mask & (~enabled_features)) ? "disabled" : "enabled", \
+				((setting_t*)(od_table + setting->offset))[index] \
+			); \
+		} \
+		break; \
+
+	for (idx = 0; idx < metadata_count; idx++) {
+		setting = &metadata[idx];
+		if (!setting->valid)
+			continue;
+		supported = !(setting->feature_mask & (~supported_features));
+		for (i = 0; i < setting->count; i++) {
+			switch (setting->type) {
+			handle_setting_all(setting, i, "%u", uint8_t);
+			handle_setting_all(setting, i, "%d", int8_t);
+			handle_setting_all(setting, i, "%u", uint16_t);
+			handle_setting_all(setting, i, "%u", int16_t);
+			handle_setting_all(setting, i, "%u", uint32_t);
+			handle_setting_all(setting, i, "%u", int32_t);
+			default:
+				dev_warn(smu->adev->dev, "invalid type for od_setting[%lu]: %u\n", idx, setting->type);
+				ret = -EINVAL;
+				break;
+			}
+		}
+	}
+#undef handle_setting_all
+	return ret;
+}
