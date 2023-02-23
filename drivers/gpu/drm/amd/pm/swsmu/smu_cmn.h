@@ -137,6 +137,8 @@ typedef enum {
 	od_settings_type_count
 } od_settings_type_t;
 
+// min and max values would be nice to include in here as limits_offset,
+// but there isn't enough consistency among ASICs to abstract across that functionality
 struct smu_cmn_od_setting_metadata {
 	uint8_t valid;
 	od_settings_type_t type;
@@ -168,9 +170,45 @@ int smu_cmn_print_od_settings(
 	size_t metadata_count,
 	const struct smu_cmn_od_setting_metadata metadata[],
 	char *buf,
-	int *size,
-	bool include_idx
+	int *size
 );
+
+static inline const char * const smu_cmn_supported_string(uint32_t available_mask, uint32_t required_mask) {
+	if (required_mask == 0xffffffff) {
+		return "unknown";
+	}
+	return (required_mask & (~available_mask)) ? "unsupported" : "supported";
+}
+
+static inline int smu_cmn_print_od_range(
+	char *buf,
+	int *size,
+	size_t setting_idx,
+	const struct smu_cmn_od_setting_metadata *setting,
+	const void *min_value,
+	const void *max_value
+) {
+#define handle_range(format_string, setting_t) \
+	case od_settings_type_##setting_t: \
+		*size += sysfs_emit_at( \
+			buf, *size, "%s (%lu): [" format_string ", " format_string "]\n", \
+			setting->name, setting_idx, *((setting_t*)min_value), *((setting_t*)max_value) \
+		); \
+		break; \
+
+	switch (setting->type) {
+		handle_range("%u", uint8_t);
+		handle_range("%d", int8_t);
+		handle_range("%u", uint16_t);
+		handle_range("%d", int16_t);
+		handle_range("%u", uint32_t);
+		handle_range("%d", int32_t);
+		default:
+			return -EINVAL;
+	}
+#undef handle_range
+	return 0;
+}
 
 #endif
 #endif

@@ -1208,6 +1208,7 @@ int smu_cmn_set_od_setting(
 
 	return 0;
 }
+
 int smu_cmn_print_od_settings(
 	struct smu_context *smu,
 	uint32_t supported_features,
@@ -1216,53 +1217,50 @@ int smu_cmn_print_od_settings(
 	size_t metadata_count,
 	const struct smu_cmn_od_setting_metadata metadata[],
 	char *buf,
-	int *size,
-	bool include_idx
+	int *size
 ) {
 	const struct smu_cmn_od_setting_metadata *setting;
-	size_t i, idx;
+	size_t i, setting_idx;
 	int ret = 0;
-	bool supported;
 	uint32_t enabled_features = od_features ? *od_features : 0x0;
 	if (!smu->od_enabled || !od_table)
 		return -EINVAL;
 	// smu_cmn_get_sysfs_buf(&buf, &size);
 #define handle_setting_all(setting, index, format_string, setting_t) \
 	case od_settings_type_##setting_t: \
-		if (include_idx) { \
+		if (setting->count > 1) { \
 			*size += sysfs_emit_at( \
-				buf, *size, "[%lu]%s[%lu] (%s, %s): " format_string "\n", \
-				idx, setting->name, index, \
-				supported ? "supported" : "unsupported", \
+				buf, *size, "%s[%lu] (%s, %s): " format_string "\n", \
+				setting->name, index, \
+				smu_cmn_supported_string(supported_features, setting->feature_mask), \
 				(setting->feature_mask & (~enabled_features)) ? "disabled" : "enabled", \
 				((setting_t*)(od_table + setting->offset))[index] \
 			); \
 		} else { \
 			*size += sysfs_emit_at( \
-				buf, *size, "%s[%lu] (%s, %s): " format_string "\n", \
-				setting->name, index, \
-				supported ? "supported" : "unsupported", \
+				buf, *size, "%s (%s, %s): " format_string "\n", \
+				setting->name, \
+				smu_cmn_supported_string(supported_features, setting->feature_mask), \
 				(setting->feature_mask & (~enabled_features)) ? "disabled" : "enabled", \
 				((setting_t*)(od_table + setting->offset))[index] \
 			); \
 		} \
 		break; \
 
-	for (idx = 0; idx < metadata_count; idx++) {
-		setting = &metadata[idx];
+	for (setting_idx = 0; setting_idx < metadata_count; setting_idx++) {
+		setting = &metadata[setting_idx];
 		if (!setting->valid)
 			continue;
-		supported = !(setting->feature_mask & (~supported_features));
 		for (i = 0; i < setting->count; i++) {
 			switch (setting->type) {
 			handle_setting_all(setting, i, "%u", uint8_t);
 			handle_setting_all(setting, i, "%d", int8_t);
 			handle_setting_all(setting, i, "%u", uint16_t);
-			handle_setting_all(setting, i, "%u", int16_t);
+			handle_setting_all(setting, i, "%d", int16_t);
 			handle_setting_all(setting, i, "%u", uint32_t);
-			handle_setting_all(setting, i, "%u", int32_t);
+			handle_setting_all(setting, i, "%d", int32_t);
 			default:
-				dev_warn(smu->adev->dev, "invalid type for od_setting[%lu]: %u\n", idx, setting->type);
+				dev_warn(smu->adev->dev, "invalid type for od_setting[%lu]: %u\n", setting_idx, setting->type);
 				ret = -EINVAL;
 				break;
 			}
@@ -1271,3 +1269,4 @@ int smu_cmn_print_od_settings(
 #undef handle_setting_all
 	return ret;
 }
+
